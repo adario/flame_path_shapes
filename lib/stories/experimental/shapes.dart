@@ -4,6 +4,8 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/experimental.dart';
 import 'package:flame/game.dart';
+import 'package:flame/image_composition.dart';
+import 'package:flame_path_shapes/commons/paths.dart';
 
 class ShapesExample extends FlameGame {
   static const description = '''
@@ -14,6 +16,8 @@ class ShapesExample extends FlameGame {
 
   @override
   Future<void> onLoad() async {
+    final flameSize = Size(174, 186);
+    final flame = flamePath().resizeTo(flameSize).shift(Offset(300, 300));
     final shapes = [
       Circle(Vector2(50, 30), 20),
       Circle(Vector2(700, 500), 50),
@@ -31,6 +35,7 @@ class ShapesExample extends FlameGame {
         Vector2(750, 60),
         Vector2(590, 30),
       ]),
+      Polygon.fromPath(flame),
     ];
     const colors = [
       Color(0xFFFFFF88),
@@ -39,6 +44,7 @@ class ShapesExample extends FlameGame {
       Color(0xFF88FF88),
       Color(0xFFaaaaFF),
       Color(0xFFFF8888),
+      Color(0xFFFFA726),
     ];
     add(ShapesComponent(shapes, colors));
     add(DotsComponent(shapes, colors));
@@ -92,10 +98,7 @@ class DotsComponent extends Component {
   }
 
   void generatePoint() {
-    final point = Vector2(
-      random.nextDouble() * 800,
-      random.nextDouble() * 600,
-    );
+    final point = Vector2(random.nextDouble() * 800, random.nextDouble() * 600);
     points.add(point);
     pointColors.add(const Color(0xff444444));
     for (var i = 0; i < shapes.length; i++) {

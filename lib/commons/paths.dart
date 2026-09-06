@@ -1,16 +1,6 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:flame/extensions.dart';
-import 'package:flame/game.dart';
-
-Path resizePath(Path path, Size size) {
-  final box = path.getBounds();
-  final t = Transform2D();
-  t.scale = Vector2(size.width / box.width, size.height / box.height);
-  return path.transform32(t.transformMatrix.storage);
-}
-
 Path roundRectPath(Size size) {
   return Path()..addRRect(
     RRect.fromRectAndRadius(

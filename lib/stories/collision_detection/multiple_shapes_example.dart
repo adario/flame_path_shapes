@@ -201,7 +201,8 @@ class CollidablePath extends MyCollidable {
     final s = size.toSize();
     final r = _rng.nextBool();
     final path = r ? flamePath() : roundRectPath(s);
-    hitbox = PolygonHitbox.contour(resizePath(path, s))..renderShape = true;
+    hitbox = PolygonHitbox.contour(path.resizeTo(s, keepRatio: r))
+      ..renderShape = true;
     add(hitbox!);
   }
 

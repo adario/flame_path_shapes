@@ -5,8 +5,9 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/game.dart';
+import 'package:flame_path_shapes/commons/paths.dart';
 
-enum Shapes { circle, rectangle, polygon }
+enum Shapes { circle, rectangle, polygon, path }
 
 class GestureHitboxesExample extends FlameGame {
   static const description = '''
@@ -30,14 +31,14 @@ class _GestureHitboxesWorld extends World with TapCallbacks {
     final hitbox = switch (shapeType) {
       Shapes.circle => CircleHitbox(),
       Shapes.rectangle => RectangleHitbox(),
-      Shapes.polygon => PolygonHitbox.relative(
-        [
-          -Vector2.random(_rng),
-          Vector2.random(_rng)..x *= -1,
-          Vector2.random(_rng),
-          Vector2.random(_rng)..y *= -1,
-        ],
-        parentSize: shapeSize,
+      Shapes.polygon => PolygonHitbox.relative([
+        -Vector2.random(_rng),
+        Vector2.random(_rng)..x *= -1,
+        Vector2.random(_rng),
+        Vector2.random(_rng)..y *= -1,
+      ], parentSize: shapeSize),
+      Shapes.path => PolygonHitbox.contour(
+        flamePath().resizeTo(shapeSize.toSize(), keepRatio: true),
       ),
     };
     return MyShapeComponent(

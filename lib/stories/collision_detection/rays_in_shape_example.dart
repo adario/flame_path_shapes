@@ -7,6 +7,7 @@ import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/game.dart';
 import 'package:flame/geometry.dart';
+import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flutter/material.dart';
 
 const playArea = Rect.fromLTRB(-100, -100, 100, 100);
@@ -96,6 +97,18 @@ class RaysInShapeWorld extends World
           ..renderShape = true,
       ],
     ),
+    PositionComponent(
+      position: Vector2.zero(),
+      children: [
+        PolygonHitbox.contour(
+            flamePath().toOrigin,
+            anchor: .center,
+            position: Vector2.zero(),
+          )
+          ..paint = whiteStroke
+          ..renderShape = true,
+      ],
+    ),
   ];
 
   @override
@@ -112,7 +125,7 @@ class RaysInShapeWorld extends World
     _componentIndex = (_componentIndex + 1) % _components.length;
     add(_components[_componentIndex]);
     _recording.clear();
-    _rays = randomRays(200);
+    _rays = randomRays(_componentIndex == _components.length - 1 ? 400 : 200);
   }
 
   final Map<Ray2, RaycastResult<ShapeHitbox>?> _recording = {};

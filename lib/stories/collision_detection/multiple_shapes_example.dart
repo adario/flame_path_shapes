@@ -97,7 +97,7 @@ abstract class MyCollidable extends PositionComponent
   double angleDelta = 0;
   final Color _defaultColor = Colors.blue.withValues(alpha: 0.8);
   final Color _collisionColor = Colors.green.withValues(alpha: 0.8);
-  final Color _screenColor = Colors.lime.withValues(alpha: 0.8);
+  final Color _screenColor = Colors.purple.withValues(alpha: 0.8);
 
   late final Paint _dragIndicatorPaint;
   final ScreenHitbox screenHitbox;
@@ -197,14 +197,18 @@ class CollidablePath extends MyCollidable {
     super.velocity,
     super.screenHitbox,
   ) {
-    final path = flamePath();
+    final r = _rng.nextBool();
+    final path = r ? flamePath() : roundRectPath(size.toSize());
     hitbox = PolygonHitbox.contour(_resize(path))..renderShape = true;
     add(hitbox!);
   }
 
-  static Path roundRectPath() {
+  static Path roundRectPath(Size size) {
     return Path()..addRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, 64, 64), Radius.circular(10)),
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        Radius.circular(min(size.width, size.height) * 0.25),
+      ),
     );
   }
 
@@ -233,11 +237,7 @@ class CollidablePath extends MyCollidable {
     return path.transform32(t.transformMatrix.storage);
   }
 
-  // @override
-  // Color get _defaultColor => Colors.orange.withValues(alpha: 0.8);
-
-  // @override
-  // Color get _collisionColor => Colors.purple.withValues(alpha: 0.8);
+  final _rng = Random();
 }
 
 class CollidableRectangle extends MyCollidable {

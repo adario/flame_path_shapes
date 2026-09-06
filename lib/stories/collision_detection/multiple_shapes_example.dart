@@ -8,7 +8,7 @@ import 'package:flame/game.dart';
 import 'package:flame/palette.dart';
 import 'package:flutter/material.dart' hide Image, Draggable;
 
-enum Shapes { circle, rectangle, polygon }
+enum Shapes { circle, rectangle, polygon, path }
 
 class MultipleShapesExample extends FlameGame with HasCollisionDetection {
   static const description = '''
@@ -97,16 +97,14 @@ abstract class MyCollidable extends PositionComponent
   double angleDelta = 0;
   final Color _defaultColor = Colors.blue.withValues(alpha: 0.8);
   final Color _collisionColor = Colors.green.withValues(alpha: 0.8);
+  final Color _screenColor = Colors.lime.withValues(alpha: 0.8);
+
   late final Paint _dragIndicatorPaint;
   final ScreenHitbox screenHitbox;
   ShapeHitbox? hitbox;
 
-  MyCollidable(
-    Vector2 position,
-    Vector2 size,
-    this.velocity,
-    this.screenHitbox,
-  ) : super(position: position, size: size, anchor: Anchor.center) {
+  MyCollidable(Vector2 position, Vector2 size, this.velocity, this.screenHitbox)
+    : super(position: position, size: size, anchor: Anchor.center) {
     _dragIndicatorPaint = BasicPalette.white.paint();
   }
 
@@ -151,7 +149,9 @@ abstract class MyCollidable extends PositionComponent
     PositionComponent other,
   ) {
     super.onCollisionStart(intersectionPoints, other);
-    hitbox?.paint.color = _collisionColor;
+    hitbox?.paint.color = other is ScreenHitbox
+        ? _screenColor
+        : _collisionColor;
   }
 
   @override
@@ -176,21 +176,68 @@ class CollidablePolygon extends MyCollidable {
     Vector2 velocity,
     ScreenHitbox screenHitbox,
   ) : super(position, size, velocity, screenHitbox) {
-    hitbox = PolygonHitbox.relative(
-      [
-        Vector2(-1.0, 0.0),
-        Vector2(-0.8, 0.6),
-        Vector2(0.0, 1.0),
-        Vector2(0.6, 0.9),
-        Vector2(1.0, 0.0),
-        Vector2(0.6, -0.8),
-        Vector2(0, -1.0),
-        Vector2(-0.8, -0.8),
-      ],
-      parentSize: size,
-    )..renderShape = true;
+    hitbox = PolygonHitbox.relative([
+      Vector2(-1.0, 0.0),
+      Vector2(-0.8, 0.6),
+      Vector2(0.0, 1.0),
+      Vector2(0.6, 0.9),
+      Vector2(1.0, 0.0),
+      Vector2(0.6, -0.8),
+      Vector2(0, -1.0),
+      Vector2(-0.8, -0.8),
+    ], parentSize: size)..renderShape = true;
     add(hitbox!);
   }
+}
+
+class CollidablePath extends MyCollidable {
+  CollidablePath(
+    super.position,
+    super.size,
+    super.velocity,
+    super.screenHitbox,
+  ) {
+    final path = flamePath();
+    hitbox = PolygonHitbox.contour(_resize(path))..renderShape = true;
+    add(hitbox!);
+  }
+
+  static Path roundRectPath() {
+    return Path()..addRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, 64, 64), Radius.circular(10)),
+    );
+  }
+
+  static Path flamePath() {
+    return Path()
+      ..moveTo(62.0, 42.8)
+      ..cubicTo(62.0, 58.9, 49.0, 65.0, 33.0, 65.0)
+      ..cubicTo(17.0, 65.0, 4.0, 58.9, 4.0, 42.8)
+      ..cubicTo(4.0, 38.6, 4.9, 35.9, 6.5, 32.2)
+      ..cubicTo(7.6, 29.8, 10.1, 40.7, 11.9, 38.8)
+      ..cubicTo(16.2, 34.1, 7.2, 23.3, 23.8, 15.2)
+      ..cubicTo(20.8, 23.5, 23.2, 26.8, 26.4, 26.8)
+      ..cubicTo(33.4, 26.8, 33.5, 16.3, 32.7, 3.0)
+      ..cubicTo(54.1, 19.6, 42.3, 26.0, 44.7, 28.1)
+      ..cubicTo(56.6, 29.4, 48.7, 3.1, 59.3, 28.3)
+      ..cubicTo(61.3, 32.8, 62.0, 37.5, 62.0, 42.8)
+      ..close();
+  }
+
+  Path _resize(Path path) {
+    final box = path.getBounds();
+    final t = Transform2D();
+    t.scale = Vector2(1.0 / box.width, 1.0 / box.height);
+    path = path.transform32(t.transformMatrix.storage);
+    t.scale = size;
+    return path.transform32(t.transformMatrix.storage);
+  }
+
+  // @override
+  // Color get _defaultColor => Colors.orange.withValues(alpha: 0.8);
+
+  // @override
+  // Color get _collisionColor => Colors.purple.withValues(alpha: 0.8);
 }
 
 class CollidableRectangle extends MyCollidable {
@@ -302,6 +349,12 @@ MyCollidable randomCollidable(
       screenHitbox,
     )..rotationSpeed = rotationSpeed,
     Shapes.polygon => CollidablePolygon(
+      position,
+      size,
+      velocity,
+      screenHitbox,
+    )..rotationSpeed = rotationSpeed,
+    Shapes.path => CollidablePath(
       position,
       size,
       velocity,

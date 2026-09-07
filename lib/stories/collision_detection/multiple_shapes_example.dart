@@ -198,15 +198,10 @@ class CollidablePath extends MyCollidable {
     super.velocity,
     super.screenHitbox,
   ) {
-    final s = size.toSize();
-    final r = _rng.nextBool();
-    final path = r ? flamePath() : roundRectPath(s);
-    hitbox = PolygonHitbox.contour(path.resizeTo(s, keepRatio: r))
-      ..renderShape = true;
+    final path = randomPath(size.toSize());
+    hitbox = PolygonHitbox.contour(path)..renderShape = true;
     add(hitbox!);
   }
-
-  final _rng = Random();
 }
 
 class CollidableRectangle extends MyCollidable {

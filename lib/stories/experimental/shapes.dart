@@ -17,7 +17,7 @@ class ShapesExample extends FlameGame {
   @override
   Future<void> onLoad() async {
     final flameSize = Size(174, 186);
-    final flame = flamePath().resizeTo(flameSize).shift(Offset(300, 300));
+    final flame = randomPath(flameSize).shift(Offset(300, 300));
     final shapes = [
       Circle(Vector2(50, 30), 20),
       Circle(Vector2(700, 500), 50),

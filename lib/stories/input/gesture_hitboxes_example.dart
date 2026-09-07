@@ -37,9 +37,7 @@ class _GestureHitboxesWorld extends World with TapCallbacks {
         Vector2.random(_rng),
         Vector2.random(_rng)..y *= -1,
       ], parentSize: shapeSize),
-      Shapes.path => PolygonHitbox.contour(
-        flamePath().resizeTo(shapeSize.toSize(), keepRatio: true),
-      ),
+      Shapes.path => PolygonHitbox.contour(randomPath(shapeSize.toSize())),
     };
     return MyShapeComponent(
       hitbox: hitbox,

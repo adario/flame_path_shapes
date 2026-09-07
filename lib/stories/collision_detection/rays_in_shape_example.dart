@@ -101,7 +101,8 @@ class RaysInShapeWorld extends World
       position: Vector2.zero(),
       children: [
         PolygonHitbox.contour(
-            flamePath().toOrigin,
+            randomPath(Size(100, 100)).centered,
+            granularity: 1.0,
             anchor: .center,
             position: Vector2.zero(),
           )

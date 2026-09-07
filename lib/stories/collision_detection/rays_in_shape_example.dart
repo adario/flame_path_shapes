@@ -63,6 +63,7 @@ class RaysInShapeWorld extends World
   );
 
   int _componentIndex = 0;
+  static final _componentSize = Size(100, 100);
 
   final _components = [
     CircleComponent(
@@ -101,7 +102,59 @@ class RaysInShapeWorld extends World
       position: Vector2.zero(),
       children: [
         PolygonHitbox.contour(
-            randomPath(Size(100, 100)).centered,
+            roundRectPath(_componentSize).centered,
+            granularity: 1.0,
+            anchor: .center,
+            position: Vector2.zero(),
+          )
+          ..paint = whiteStroke
+          ..renderShape = true,
+      ],
+    ),
+    PositionComponent(
+      position: Vector2.zero(),
+      children: [
+        PolygonHitbox.contour(
+            flamePath().resizeTo(_componentSize).centered,
+            granularity: 1.0,
+            anchor: .center,
+            position: Vector2.zero(),
+          )
+          ..paint = whiteStroke
+          ..renderShape = true,
+      ],
+    ),
+    PositionComponent(
+      position: Vector2.zero(),
+      children: [
+        PolygonHitbox.contour(
+            invader1Path().resizeTo(_componentSize).centered,
+            granularity: 1.0,
+            anchor: .center,
+            position: Vector2.zero(),
+          )
+          ..paint = whiteStroke
+          ..renderShape = true,
+      ],
+    ),
+    PositionComponent(
+      position: Vector2.zero(),
+      children: [
+        PolygonHitbox.contour(
+            invader2Path().resizeTo(_componentSize).centered,
+            granularity: 1.0,
+            anchor: .center,
+            position: Vector2.zero(),
+          )
+          ..paint = whiteStroke
+          ..renderShape = true,
+      ],
+    ),
+    PositionComponent(
+      position: Vector2.zero(),
+      children: [
+        PolygonHitbox.contour(
+            invader3Path().resizeTo(_componentSize).centered,
             granularity: 1.0,
             anchor: .center,
             position: Vector2.zero(),
@@ -126,7 +179,7 @@ class RaysInShapeWorld extends World
     _componentIndex = (_componentIndex + 1) % _components.length;
     add(_components[_componentIndex]);
     _recording.clear();
-    _rays = randomRays(_componentIndex == _components.length - 1 ? 400 : 200);
+    _rays = randomRays(_componentIndex >= 3 ? 400 : 200);
   }
 
   final Map<Ray2, RaycastResult<ShapeHitbox>?> _recording = {};

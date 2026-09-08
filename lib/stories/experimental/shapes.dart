@@ -48,6 +48,7 @@ class ShapesExample extends FlameGame {
     ];
     add(ShapesComponent(shapes, colors));
     add(DotsComponent(shapes, colors));
+    add(FpsTextComponent(position: Vector2(8, size.y - 24), priority: 1));
   }
 }
 

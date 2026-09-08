@@ -5,20 +5,24 @@ import 'package:flame/extensions.dart';
 
 final _rnd = Random();
 
-Path randomPath(Size size, {bool resize = true, bool keepRatio = true}) {
-  final r = _rnd.nextIntBetween(0, 4);
+Path indexedPath(
+  int index,
+  Size size, {
+  bool resize = true,
+  bool keepRatio = true,
+}) {
   Path path;
-  switch (r) {
+  switch (index) {
     case 0:
-      path = flamePath();
-    case 1:
-      path = invader1Path();
-    case 2:
-      path = invader2Path();
-    case 3:
-      path = invader3Path();
-    case 4:
       return roundRectPath(size);
+    case 1:
+      path = flamePath();
+    case 2:
+      path = invader1Path();
+    case 3:
+      path = invader2Path();
+    case 4:
+      path = invader3Path();
     default:
       throw Exception('Invalid random path');
   }
@@ -26,6 +30,11 @@ Path randomPath(Size size, {bool resize = true, bool keepRatio = true}) {
     path = path.resizeTo(size, keepRatio: keepRatio);
   }
   return path;
+}
+
+Path randomPath(Size size, {bool resize = true, bool keepRatio = true}) {
+  final index = _rnd.nextIntBetween(0, 4);
+  return indexedPath(index, size, resize: resize, keepRatio: keepRatio);
 }
 
 Path roundRectPath(Size size) {

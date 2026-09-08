@@ -48,9 +48,15 @@ final redStroke = Paint()
   ..style = PaintingStyle.stroke;
 
 class RaysInShapeWorld extends World
-    with HasGameRef<RaysInShapeExample>, HasCollisionDetection, TapCallbacks {
+    with
+        HasGameRef<RaysInShapeExample>,
+        HasCollisionDetection,
+        TapCallbacks,
+        DoubleTapCallbacks {
   final _rng = Random();
   List<Ray2> _rays = [];
+
+  int get _numRays => 400;
 
   List<Ray2> randomRays(int count) => List<Ray2>.generate(
     count,
@@ -63,18 +69,22 @@ class RaysInShapeWorld extends World
   );
 
   int _componentIndex = 0;
-  static final _componentSize = Size(100, 100);
+  static final _componentSize = Vector2(
+    playArea.width * 0.5,
+    playArea.height * 0.5,
+  );
+  static final _pathSize = Size(playArea.width * 0.5, playArea.height * 0.5);
 
   final _components = [
     CircleComponent(
-      radius: 60,
+      radius: _componentSize.x * 0.6,
       anchor: Anchor.center,
       position: Vector2.zero(),
       paint: whiteStroke,
       children: [CircleHitbox()],
     ),
     RectangleComponent(
-      size: Vector2(100, 100),
+      size: _componentSize,
       anchor: Anchor.center,
       position: Vector2.zero(),
       paint: whiteStroke,
@@ -90,7 +100,7 @@ class RaysInShapeWorld extends World
               Vector2(0.3, 1),
               Vector2(-1, 0.6),
             ],
-            parentSize: Vector2(100, 100),
+            parentSize: _componentSize,
             anchor: Anchor.center,
             position: Vector2.zero(),
           )
@@ -98,100 +108,114 @@ class RaysInShapeWorld extends World
           ..renderShape = true,
       ],
     ),
-    PositionComponent(
-      position: Vector2.zero(),
-      children: [
-        PolygonHitbox.contour(
-            roundRectPath(_componentSize).centered,
-            granularity: 1.0,
-            anchor: .center,
-            position: Vector2.zero(),
-          )
-          ..paint = whiteStroke
-          ..renderShape = true,
-      ],
-    ),
-    PositionComponent(
-      position: Vector2.zero(),
-      children: [
-        PolygonHitbox.contour(
-            flamePath().resizeTo(_componentSize).centered,
-            granularity: 1.0,
-            anchor: .center,
-            position: Vector2.zero(),
-          )
-          ..paint = whiteStroke
-          ..renderShape = true,
-      ],
-    ),
-    PositionComponent(
-      position: Vector2.zero(),
-      children: [
-        PolygonHitbox.contour(
-            invader1Path().resizeTo(_componentSize).centered,
-            granularity: 1.0,
-            anchor: .center,
-            position: Vector2.zero(),
-          )
-          ..paint = whiteStroke
-          ..renderShape = true,
-      ],
-    ),
-    PositionComponent(
-      position: Vector2.zero(),
-      children: [
-        PolygonHitbox.contour(
-            invader2Path().resizeTo(_componentSize).centered,
-            granularity: 1.0,
-            anchor: .center,
-            position: Vector2.zero(),
-          )
-          ..paint = whiteStroke
-          ..renderShape = true,
-      ],
-    ),
-    PositionComponent(
-      position: Vector2.zero(),
-      children: [
-        PolygonHitbox.contour(
-            invader3Path().resizeTo(_componentSize).centered,
-            granularity: 1.0,
-            anchor: .center,
-            position: Vector2.zero(),
-          )
-          ..paint = whiteStroke
-          ..renderShape = true,
-      ],
-    ),
+    for (var index = 0; index < 5; ++index)
+      PositionComponent(
+        position: Vector2.zero(),
+        children: [
+          PolygonHitbox.contour(
+              indexedPath(index, _pathSize).centered,
+              granularity: 1.0,
+              anchor: .center,
+              position: Vector2.zero(),
+            )
+            ..paint = whiteStroke
+            ..renderShape = true,
+        ],
+      ),
   ];
+
+  late TextComponent _textComponent;
+  TextPaint get _textRenderer =>
+      TextPaint(style: TextStyle(color: Colors.white, fontSize: 10));
+
+  PositionComponent get current => _components[_componentIndex];
+  PolygonRayIntersection? get polygon {
+    final first = current.children.first;
+    if (first is PolygonRayIntersection) {
+      return first;
+    }
+    return null;
+  }
 
   @override
   FutureOr<void> onLoad() {
     super.onLoad();
-    add(_components[_componentIndex]);
-    _rays = randomRays(200);
+    add(current);
+    _textComponent = TextComponent(
+      text: 'Rays #${_rays.length}',
+      priority: 1,
+      position: Vector2(
+        (playArea.width * 0.5) - 5,
+        (playArea.height * 0.5) - 10,
+      ),
+      anchor: .centerRight,
+      textRenderer: _textRenderer,
+    );
+    addAll([
+      FpsTextComponent(
+        priority: 1,
+        position: Vector2(
+          (-playArea.width * 0.5) + 5,
+          (playArea.height * 0.5) - 10,
+        ),
+        anchor: .centerLeft,
+        textRenderer: _textRenderer,
+      ),
+      _textComponent,
+    ]);
+    _rays = randomRays(_numRays);
   }
 
   @override
   void onTapUp(TapUpEvent event) {
     super.onTapUp(event);
-    remove(_components[_componentIndex]);
+    final polygon = this.polygon;
+    if (polygon != null) {
+      polygon.useContainment = !polygon.useContainment;
+    }
+    _updates = _updatesInterval;
+  }
+
+  @override
+  void onDoubleTapUp(DoubleTapEvent event) {
+    super.onDoubleTapUp(event);
+    remove(current);
     _componentIndex = (_componentIndex + 1) % _components.length;
-    add(_components[_componentIndex]);
+    add(current);
     _recording.clear();
-    _rays = randomRays(_componentIndex >= 3 ? 400 : 200);
+    _rays = randomRays(_numRays);
+    _updates = _updatesInterval;
   }
 
   final Map<Ray2, RaycastResult<ShapeHitbox>?> _recording = {};
+  final int _updatesInterval = 30;
+  var _updates = 0;
 
+  late final _timer = Stopwatch();
   @override
   void update(double dt) {
     super.update(dt);
 
+    _timer.start();
     for (final ray in _rays) {
       final result = collisionDetection.raycast(ray);
       _recording.addAll({ray: result});
     }
+    _timer.stop();
+    if (++_updates >= _updatesInterval) {
+      _updates = 0;
+      var message = '#${_rays.length} ';
+      final polygon = this.polygon;
+      if (polygon != null) {
+        message += polygon.useContainment ? 'contain ' : 'crossing ';
+      } else {
+        message += 'circle ';
+      }
+      final t = '${_timer.elapsedMicroseconds}µs';
+      message += t.padLeft(7);
+      _textComponent.text = message;
+    }
+    _timer.reset();
   }
 
   @override

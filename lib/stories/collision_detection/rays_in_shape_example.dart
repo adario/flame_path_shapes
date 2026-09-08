@@ -191,17 +191,16 @@ class RaysInShapeWorld extends World
   final int _updatesInterval = 30;
   var _updates = 0;
 
-  late final _timer = Stopwatch();
   @override
   void update(double dt) {
     super.update(dt);
 
-    _timer.start();
+    final timer = Stopwatch()..start();
     for (final ray in _rays) {
       final result = collisionDetection.raycast(ray);
       _recording.addAll({ray: result});
     }
-    _timer.stop();
+    timer.stop();
     if (++_updates >= _updatesInterval) {
       _updates = 0;
       var message = '#${_rays.length} ';
@@ -211,11 +210,10 @@ class RaysInShapeWorld extends World
       } else {
         message += 'circle ';
       }
-      final t = '${_timer.elapsedMicroseconds}µs';
+      final t = '${timer.elapsedMicroseconds}µs';
       message += t.padLeft(7);
       _textComponent.text = message;
     }
-    _timer.reset();
   }
 
   @override

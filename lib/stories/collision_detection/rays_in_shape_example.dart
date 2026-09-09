@@ -162,8 +162,7 @@ final greenStroke = Paint()
 
 final hoveredGreenStroke = Paint()
   ..color = const Color(0xff00ff00)
-  ..style = PaintingStyle.stroke
-  ..strokeWidth = 1.25;
+  ..style = PaintingStyle.stroke;
 
 final redStroke = Paint()
   ..color = const Color(0xd0ff0000)
@@ -171,15 +170,159 @@ final redStroke = Paint()
 
 final hoveredRedStroke = Paint()
   ..color = const Color(0xffff0000)
-  ..style = PaintingStyle.stroke
-  ..strokeWidth = 1.25;
+  ..style = PaintingStyle.stroke;
+
+class RayCircleComponent extends CircleComponent
+    with
+        DragCallbacks,
+        HoverCallbacks,
+        TapCallbacks,
+        HasWorldRef<RaysInShapeWorld> {
+  RayCircleComponent(
+    this.ray, {
+    super.radius,
+    super.position,
+    super.scale,
+    super.angle,
+    super.anchor,
+    super.children,
+    super.priority,
+    super.paint,
+    super.paintLayers,
+    super.key,
+  });
+
+  RaycastResult<ShapeHitbox>? _raycastResult;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _raycastResult = worldRef.intersections(ray);
+    if (_raycastResult == null) {
+      paint = lightPaint;
+    } else {
+      paint = _raycastResult!.isInsideHitbox ? greenPaint : redPaint;
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    canvas.save();
+    canvas.translate(radius, radius);
+    final origin = ray.origin.toOffset();
+    if (_raycastResult == null) {
+      canvas.drawLine(.zero, ray.direction.scaled(10).toOffset(), lightPaint);
+    } else {
+      final target = _raycastResult!.intersectionPoint!.toOffset() - origin;
+      canvas.drawLine(.zero, target, lightPaint);
+    }
+    canvas.restore();
+  }
+
+  @override
+  void onHoverEnter() {
+    // Only apply hover feedback when not dragging.
+    if (!_isDragging) {
+      _isHovering = true;
+    }
+  }
+
+  @override
+  void onHoverExit() {
+    if (!_isDragging) {
+      _isHovering = false;
+    }
+  }
+
+  @override
+  void onHoverCancel() {
+    onHoverExit();
+  }
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    _isDragging = true;
+
+    // Guard against invalid local event positions.
+    var local = event.localPosition;
+    if (local.x.isNaN || local.y.isNaN) {
+      local = absoluteToLocal(event.canvasPosition);
+    }
+  }
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    _isDragging = false;
+  }
+
+  @override
+  void onTapCancel(TapCancelEvent event) {
+    _isDragging = false;
+  }
+
+  @override
+  void onDragStart(DragStartEvent event) {
+    super.onDragStart(event);
+    _isDragging = true;
+    _updateFromDrag(event.localPosition);
+  }
+
+  @override
+  void onDragUpdate(DragUpdateEvent event) {
+    // Guard against invalid local event positions.
+    var local = event.localEndPosition;
+    if (local.x.isNaN || local.y.isNaN) {
+      local = absoluteToLocal(event.canvasEndPosition);
+    }
+    _updateFromDrag(local);
+  }
+
+  @override
+  void onDragEnd(DragEndEvent event) {
+    super.onDragEnd(event);
+    _isDragging = false;
+  }
+
+  @override
+  void onDragCancel(DragCancelEvent event) {
+    super.onDragCancel(event);
+    _isDragging = false;
+  }
+
+  @override
+  bool containsLocalPoint(Vector2 point) {
+    var inside = super.containsLocalPoint(point);
+    if (!inside) {
+      inside = point.taxicabDistanceTo(.zero()) <= radius * 2;
+    }
+    return inside;
+  }
+
+  void _updateFromDrag(Vector2 drag) {
+    position += drag;
+    ray.origin += drag;
+  }
+
+  final Ray2 ray;
+  bool _isDragging = false;
+  bool _isHovering = false;
+
+  bool get _isActive => _isHovering || _isDragging;
+
+  Paint get lightPaint => _isActive ? hoveredLightStroke : lightStroke;
+  Paint get redPaint => _isActive ? hoveredRedStroke : redStroke;
+  Paint get greenPaint => _isActive ? hoveredGreenStroke : greenStroke;
+}
 
 class RaysInShapeWorld extends World
-    with HasGameRef<RaysInShapeExample>, HasCollisionDetection, HoverCallbacks {
+    with HasGameRef<RaysInShapeExample>, HasCollisionDetection {
   final _rng = Random();
   List<Ray2> _rays = [];
+  final Map<Ray2, RayCircleComponent> _circles = {};
+  Iterable<RayCircleComponent> get circleComponents => _circles.values;
 
-  int get _numRays => 200;
+  int get _numRays => 400;
 
   List<Ray2> randomRays(int count) => List<Ray2>.generate(
     count,
@@ -190,6 +333,22 @@ class RaysInShapeWorld extends World
       direction: (Vector2.random(_rng) - Vector2(0.5, 0.5)).normalized(),
     ),
   );
+
+  void _createCircles() {
+    removeAll(circleComponents);
+    _circles.clear();
+    for (final ray in _rays) {
+      final circle = RayCircleComponent(
+        ray,
+        position: ray.origin.clone(),
+        radius: 1,
+        anchor: .center,
+        paint: lightStroke,
+      );
+      _circles[ray] = circle;
+    }
+    addAll(circleComponents);
+  }
 
   int _componentIndex = 0;
   static final _componentSize = Vector2(
@@ -308,6 +467,7 @@ class RaysInShapeWorld extends World
     _addCurrent(current);
     _recording.clear();
     _rays = randomRays(_numRays);
+    _createCircles();
     _forceUpdate();
   }
 
@@ -363,38 +523,23 @@ class RaysInShapeWorld extends World
       _textComponent,
     ]);
     _rays = randomRays(_numRays);
+    _createCircles();
   }
 
-  @override
-  bool containsLocalPoint(Vector2 point) {
-    final inside = playArea.contains(point.toOffset());
-    if (inside) {
-      hoveredRay = _rayAtPoint(point);
-    } else {
-      hoveredRay = null;
-    }
-    return inside;
-  }
-
-  int? _rayAtPoint(Vector2 point) {
-    for (final rayEntry in _rays.indexed) {
-      if (point.taxicabDistanceTo(rayEntry.$2.origin) < 2) {
-        return rayEntry.$1;
+  Ray2? rayAtPoint(Vector2 point) {
+    for (final ray in _rays) {
+      if (point.taxicabDistanceTo(ray.origin) < 2) {
+        return ray;
       }
     }
     return null;
   }
 
-  bool _hovered(int index) => index == hoveredRay;
-  Paint lightPaint(int index) =>
-      _hovered(index) ? hoveredLightStroke : lightStroke;
-  Paint redPaint(int index) => _hovered(index) ? hoveredRedStroke : redStroke;
-  Paint greenPaint(int index) =>
-      _hovered(index) ? hoveredGreenStroke : greenStroke;
-
   final Map<Ray2, RaycastResult<ShapeHitbox>?> _recording = {};
   final int _updatesInterval = 30;
   var _updates = 0;
+
+  RaycastResult<ShapeHitbox>? intersections(Ray2 ray) => _recording[ray];
 
   @override
   void update(double dt) {
@@ -424,35 +569,5 @@ class RaysInShapeWorld extends World
     }
     message += timer.elapsedString.padLeft(7);
     _textComponent.text = message;
-  }
-
-  @override
-  void render(Canvas canvas) {
-    super.render(canvas);
-    for (final rayEntry in _rays.indexed) {
-      final index = rayEntry.$1;
-      final ray = rayEntry.$2;
-      final result = _recording[ray];
-      final origin = ray.origin.toOffset();
-      if (result == null) {
-        canvas.drawLine(
-          origin,
-          (ray.origin + ray.direction.scaled(10)).toOffset(),
-          lightPaint(index),
-        );
-        canvas.drawCircle(origin, _hovered(index) ? 1 : 1.5, lightPaint(index));
-      } else {
-        canvas.drawLine(
-          origin,
-          result.intersectionPoint!.toOffset(),
-          lightPaint(index),
-        );
-        canvas.drawCircle(
-          origin,
-          _hovered(index) ? 1 : 2,
-          result.isInsideHitbox ? redPaint(index) : greenPaint(index),
-        );
-      }
-    }
   }
 }

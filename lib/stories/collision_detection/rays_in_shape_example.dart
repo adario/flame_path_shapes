@@ -3,11 +3,16 @@ import 'dart:math';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/game.dart';
 import 'package:flame/geometry.dart';
+import 'package:flame/palette.dart';
+import 'package:flame/text.dart';
+import 'package:flame_path_shapes/commons/cancellable_button_component.dart';
 import 'package:flame_path_shapes/commons/paths.dart';
+import 'package:flame_path_shapes/commons/rounded_rect_component.dart';
 import 'package:flutter/material.dart';
 
 const playArea = Rect.fromLTRB(-100, -100, 100, 100);
@@ -23,7 +28,7 @@ extension ElapsedString on Stopwatch {
   }
 }
 
-class RaysInShapeExample extends FlameGame {
+class RaysInShapeExample extends FlameGame<RaysInShapeWorld> {
   static const description = '''
 In this example we showcase the raytrace functionality where you can see whether
 the rays are inside the shapes or not. Double-click to change the shape that the rays
@@ -34,6 +39,18 @@ the ray casting/intersection behaviour between the (current) crossings approach
 and the point-containment proposal, which should be used for concave polygons.
 ''';
 
+  TextRenderer get textRenderer =>
+      TextPaint(style: TextStyle(fontSize: 8, color: Colors.white));
+
+  TextRenderer get textOffRenderer =>
+      TextPaint(style: TextStyle(fontSize: 8, color: Colors.white54));
+
+  Vector2 get buttonSize => Vector2(32, 12);
+
+  late AdvancedButtonComponent _rotateButton;
+  late AdvancedButtonComponent _modeButton;
+  late AdvancedButtonComponent _shapeButton;
+
   RaysInShapeExample()
     : super(
         world: RaysInShapeWorld(),
@@ -42,6 +59,89 @@ and the point-containment proposal, which should be used for concave polygons.
           height: playArea.height,
         ),
       );
+
+  @override
+  FutureOr<void> onLoad() async {
+    await super.onLoad();
+
+    _rotateButton = _createRotateButton();
+    _rotateButton.isDisabled = true;
+    _shapeButton = _createShapeButton();
+    _modeButton = _createModeButton();
+    _modeButton.isDisabled = true;
+    camera.viewport.addAll([_rotateButton, _shapeButton, _modeButton]);
+  }
+
+  Vector2 get halfSize => size * 0.5;
+
+  AdvancedButtonComponent _createButton(
+    String title,
+    double x,
+    Anchor anchor,
+    Color color,
+    void Function()? action,
+  ) {
+    final disabledColor = color.withValues(alpha: 0.5);
+    Color downColor;
+    if (color == BasicPalette.orange.color) {
+      downColor = BasicPalette.lightOrange.color;
+    } else if (color == BasicPalette.blue.color) {
+      downColor = BasicPalette.lightBlue.color;
+    } else if (color == BasicPalette.pink.color) {
+      downColor = BasicPalette.lightPink.color;
+    } else {
+      downColor = color;
+    }
+    return CancellableButtonComponent(
+      position: Vector2(x, 2),
+      size: buttonSize,
+      anchor: anchor,
+      defaultLabel: TextComponent(text: title, textRenderer: textRenderer),
+      disabledLabel: TextComponent(text: title, textRenderer: textOffRenderer),
+      defaultSkin: RoundedRectComponent()..setColor(color),
+      disabledSkin: RoundedRectComponent()..setColor(disabledColor),
+      downSkin: RoundedRectComponent()..setColor(downColor),
+      onReleased: action,
+    );
+  }
+
+  AdvancedButtonComponent _createRotateButton() {
+    return _createButton(
+      'Rotate',
+      2,
+      .topLeft,
+      BasicPalette.orange.color,
+      () => world.toggleRotate(),
+    );
+  }
+
+  AdvancedButtonComponent _createModeButton() {
+    return _createButton(
+      'Mode',
+      size.x - 2,
+      .topRight,
+      BasicPalette.pink.color,
+      () => world.toggleContainment(),
+    );
+  }
+
+  AdvancedButtonComponent _createShapeButton() {
+    return _createButton(
+      'Shape',
+      size.x * 0.5,
+      .topCenter,
+      BasicPalette.blue.color,
+      () {
+        world.changeShape();
+        final isCircle = world.current is CircleComponent;
+        _rotateButton.isDisabled = isCircle;
+        _modeButton.isDisabled = isCircle;
+        if (isCircle && world.isRotating) {
+          world.toggleRotate();
+        }
+      },
+    );
+  }
 }
 
 final whiteStroke = Paint()
@@ -75,16 +175,11 @@ final hoveredRedStroke = Paint()
   ..strokeWidth = 1.25;
 
 class RaysInShapeWorld extends World
-    with
-        HasGameRef<RaysInShapeExample>,
-        HasCollisionDetection,
-        TapCallbacks,
-        DoubleTapCallbacks,
-        HoverCallbacks {
+    with HasGameRef<RaysInShapeExample>, HasCollisionDetection, HoverCallbacks {
   final _rng = Random();
   List<Ray2> _rays = [];
 
-  int get _numRays => 400;
+  int get _numRays => 200;
 
   List<Ray2> randomRays(int count) => List<Ray2>.generate(
     count,
@@ -102,6 +197,16 @@ class RaysInShapeWorld extends World
     playArea.height * 0.5,
   );
   static final _pathSize = Size(playArea.width * 0.5, playArea.height * 0.5);
+
+  static Effect createRotate() {
+    return RotateEffect.by(
+      rotateAmplitude,
+      EffectController(duration: rotateDuration, infinite: true),
+    );
+  }
+
+  static double get rotateAmplitude => pi * 2.0;
+  static double get rotateDuration => 10.0;
 
   final _components = [
     CircleComponent(
@@ -167,11 +272,72 @@ class RaysInShapeWorld extends World
 
   var useContainment = false;
   int? hoveredRay;
+  Effect? rotate;
+  var isRotating = false;
+
+  void _forceUpdate() {
+    _updates = _updatesInterval;
+  }
+
+  void toggleRotate() {
+    if (_componentIndex == 0) {
+      // Not available on the circle.
+      return;
+    }
+    isRotating = !isRotating;
+    if (isRotating) {
+      _addRotate(current);
+    } else {
+      _removeRotate();
+    }
+    _forceUpdate();
+  }
+
+  void toggleContainment() {
+    if (_componentIndex == 0) {
+      // Not available on the circle.
+      return;
+    }
+    useContainment = !useContainment;
+    _forceUpdate();
+  }
+
+  void changeShape() {
+    remove(current);
+    _componentIndex = (_componentIndex + 1) % _components.length;
+    _addCurrent(current);
+    _recording.clear();
+    _rays = randomRays(_numRays);
+    _forceUpdate();
+  }
+
+  bool _addRotate(Component component) {
+    _removeRotate();
+    if (_componentIndex != 0 && current.children.length < 2) {
+      rotate = createRotate();
+      component.add(rotate!);
+      return true;
+    }
+    return false;
+  }
+
+  void _removeRotate() {
+    rotate?.removeFromParent();
+    rotate = null;
+  }
+
+  void _addCurrent(PositionComponent component) {
+    _removeRotate();
+    if (isRotating) {
+      _addRotate(component);
+    }
+    add(component);
+  }
 
   @override
   FutureOr<void> onLoad() {
     super.onLoad();
-    add(current);
+    _addCurrent(current);
     _textComponent = TextComponent(
       text: 'Rays #${_rays.length}',
       priority: 1,
@@ -225,37 +391,6 @@ class RaysInShapeWorld extends World
   Paint redPaint(int index) => _hovered(index) ? hoveredRedStroke : redStroke;
   Paint greenPaint(int index) =>
       _hovered(index) ? hoveredGreenStroke : greenStroke;
-
-  @override
-  void onTapDown(TapDownEvent event) {
-    super.onTapDown(event);
-    if (hoveredRay == null) {
-      final point = event.localPosition;
-      if (containsLocalPoint(point)) {
-        // What?
-      }
-    }
-  }
-
-  @override
-  void onTapUp(TapUpEvent event) {
-    super.onTapUp(event);
-    if (polygon != null) {
-      useContainment = !useContainment;
-    }
-    _updates = _updatesInterval;
-  }
-
-  @override
-  void onDoubleTapUp(DoubleTapEvent event) {
-    super.onDoubleTapUp(event);
-    remove(current);
-    _componentIndex = (_componentIndex + 1) % _components.length;
-    add(current);
-    _recording.clear();
-    _rays = randomRays(_numRays);
-    _updates = _updatesInterval;
-  }
 
   final Map<Ray2, RaycastResult<ShapeHitbox>?> _recording = {};
   final int _updatesInterval = 30;

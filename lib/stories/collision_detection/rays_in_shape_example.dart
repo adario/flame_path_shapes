@@ -12,13 +12,26 @@ import 'package:flutter/material.dart';
 
 const playArea = Rect.fromLTRB(-100, -100, 100, 100);
 
+extension ElapsedString on Stopwatch {
+  String get elapsedString {
+    final elapsed = elapsedMicroseconds;
+    if (elapsed > 1000) {
+      return '${(elapsed / 1000).toStringAsFixed(1)}ms';
+    } else {
+      return '$elapsedµs';
+    }
+  }
+}
+
 class RaysInShapeExample extends FlameGame {
   static const description = '''
 In this example we showcase the raytrace functionality where you can see whether
-the rays are inside the shapes or not. Click to change the shape that the rays
+the rays are inside the shapes or not. Double-click to change the shape that the rays
 are casted against. The rays originates from small circles, and if the circle is
 inside the shape it will be red, otherwise green. And if the ray doesn't hit any
-shape it will be gray.
+shape it will be gray. Click once in all shapes but the circle to toggle
+the ray casting/intersection behaviour between the (current) crossings approach
+and the point-containment proposal, which should be used for concave polygons.
 ''';
 
   RaysInShapeExample()
@@ -36,23 +49,38 @@ final whiteStroke = Paint()
   ..style = PaintingStyle.stroke;
 
 final lightStroke = Paint()
-  ..color = const Color(0x50ffffff)
+  ..color = const Color(0x80ffffff)
+  ..style = PaintingStyle.stroke;
+
+final hoveredLightStroke = Paint()
+  ..color = const Color(0xd0ffffff)
   ..style = PaintingStyle.stroke;
 
 final greenStroke = Paint()
-  ..color = const Color(0xff00ff00)
+  ..color = const Color(0xd000ff00)
   ..style = PaintingStyle.stroke;
 
+final hoveredGreenStroke = Paint()
+  ..color = const Color(0xff00ff00)
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 1.25;
+
 final redStroke = Paint()
-  ..color = const Color(0xffff0000)
+  ..color = const Color(0xd0ff0000)
   ..style = PaintingStyle.stroke;
+
+final hoveredRedStroke = Paint()
+  ..color = const Color(0xffff0000)
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 1.25;
 
 class RaysInShapeWorld extends World
     with
         HasGameRef<RaysInShapeExample>,
         HasCollisionDetection,
         TapCallbacks,
-        DoubleTapCallbacks {
+        DoubleTapCallbacks,
+        HoverCallbacks {
   final _rng = Random();
   List<Ray2> _rays = [];
 
@@ -137,6 +165,9 @@ class RaysInShapeWorld extends World
     return null;
   }
 
+  var useContainment = false;
+  int? hoveredRay;
+
   @override
   FutureOr<void> onLoad() {
     super.onLoad();
@@ -153,6 +184,8 @@ class RaysInShapeWorld extends World
     );
     addAll([
       FpsTextComponent(
+        decimalPlaces: 1,
+        windowSize: _updatesInterval,
         priority: 1,
         position: Vector2(
           (-playArea.width * 0.5) + 5,
@@ -167,11 +200,48 @@ class RaysInShapeWorld extends World
   }
 
   @override
+  bool containsLocalPoint(Vector2 point) {
+    final inside = playArea.contains(point.toOffset());
+    if (inside) {
+      hoveredRay = _rayAtPoint(point);
+    } else {
+      hoveredRay = null;
+    }
+    return inside;
+  }
+
+  int? _rayAtPoint(Vector2 point) {
+    for (final rayEntry in _rays.indexed) {
+      if (point.taxicabDistanceTo(rayEntry.$2.origin) < 2) {
+        return rayEntry.$1;
+      }
+    }
+    return null;
+  }
+
+  bool _hovered(int index) => index == hoveredRay;
+  Paint lightPaint(int index) =>
+      _hovered(index) ? hoveredLightStroke : lightStroke;
+  Paint redPaint(int index) => _hovered(index) ? hoveredRedStroke : redStroke;
+  Paint greenPaint(int index) =>
+      _hovered(index) ? hoveredGreenStroke : greenStroke;
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    super.onTapDown(event);
+    if (hoveredRay == null) {
+      final point = event.localPosition;
+      if (containsLocalPoint(point)) {
+        // What?
+      }
+    }
+  }
+
+  @override
   void onTapUp(TapUpEvent event) {
     super.onTapUp(event);
-    final polygon = this.polygon;
     if (polygon != null) {
-      polygon.useContainment = !polygon.useContainment;
+      useContainment = !useContainment;
     }
     _updates = _updatesInterval;
   }
@@ -197,47 +267,55 @@ class RaysInShapeWorld extends World
 
     final timer = Stopwatch()..start();
     for (final ray in _rays) {
-      final result = collisionDetection.raycast(ray);
-      _recording.addAll({ray: result});
+      final result = collisionDetection.raycast(
+        ray,
+        useContainment: useContainment,
+      );
+      _recording[ray] = result;
     }
     timer.stop();
     if (++_updates >= _updatesInterval) {
       _updates = 0;
-      var message = '#${_rays.length} ';
-      final polygon = this.polygon;
-      if (polygon != null) {
-        message += polygon.useContainment ? 'contain ' : 'crossing ';
-      } else {
-        message += 'circle ';
-      }
-      final t = '${timer.elapsedMicroseconds}µs';
-      message += t.padLeft(7);
-      _textComponent.text = message;
+      _updateTimerText(timer);
     }
+  }
+
+  void _updateTimerText(Stopwatch timer) {
+    var message = '#${_rays.length} ';
+    if (polygon != null) {
+      message += useContainment ? 'contain ' : 'crossing ';
+    } else {
+      message += 'circle ';
+    }
+    message += timer.elapsedString.padLeft(7);
+    _textComponent.text = message;
   }
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    for (final ray in _recording.keys) {
+    for (final rayEntry in _rays.indexed) {
+      final index = rayEntry.$1;
+      final ray = rayEntry.$2;
       final result = _recording[ray];
+      final origin = ray.origin.toOffset();
       if (result == null) {
         canvas.drawLine(
-          ray.origin.toOffset(),
+          origin,
           (ray.origin + ray.direction.scaled(10)).toOffset(),
-          lightStroke,
+          lightPaint(index),
         );
-        canvas.drawCircle(ray.origin.toOffset(), 1, lightStroke);
+        canvas.drawCircle(origin, _hovered(index) ? 1 : 1.5, lightPaint(index));
       } else {
         canvas.drawLine(
-          ray.origin.toOffset(),
+          origin,
           result.intersectionPoint!.toOffset(),
-          lightStroke,
+          lightPaint(index),
         );
         canvas.drawCircle(
-          ray.origin.toOffset(),
-          1,
-          result.isInsideHitbox ? redStroke : greenStroke,
+          origin,
+          _hovered(index) ? 1 : 2,
+          result.isInsideHitbox ? redPaint(index) : greenPaint(index),
         );
       }
     }

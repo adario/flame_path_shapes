@@ -149,7 +149,7 @@ final whiteStroke = Paint()
   ..style = PaintingStyle.stroke;
 
 final lightStroke = Paint()
-  ..color = const Color(0x80ffffff)
+  ..color = const Color(0x90ffffff)
   ..style = PaintingStyle.stroke;
 
 final hoveredLightStroke = Paint()
@@ -193,15 +193,20 @@ class RayCircleComponent extends CircleComponent
   });
 
   RaycastResult<ShapeHitbox>? _raycastResult;
+  late final _rayLength = playArea.width * 0.1;
+  late Offset _lineTarget;
 
   @override
   void update(double dt) {
     super.update(dt);
     _raycastResult = worldRef.intersections(ray);
     if (_raycastResult == null) {
-      paint = lightPaint;
+      paint = _lightPaint;
+      _lineTarget = ray.direction.scaled(_rayLength).toOffset();
     } else {
-      paint = _raycastResult!.isInsideHitbox ? greenPaint : redPaint;
+      paint = _raycastResult!.isInsideHitbox ? _greenPaint : _redPaint;
+      final origin = ray.origin.toOffset();
+      _lineTarget = _raycastResult!.intersectionPoint!.toOffset() - origin;
     }
   }
 
@@ -210,27 +215,21 @@ class RayCircleComponent extends CircleComponent
     super.render(canvas);
     canvas.save();
     canvas.translate(radius, radius);
-    final origin = ray.origin.toOffset();
-    if (_raycastResult == null) {
-      canvas.drawLine(.zero, ray.direction.scaled(10).toOffset(), lightPaint);
-    } else {
-      final target = _raycastResult!.intersectionPoint!.toOffset() - origin;
-      canvas.drawLine(.zero, target, lightPaint);
-    }
+    canvas.drawLine(.zero, _lineTarget, paint);
     canvas.restore();
   }
 
   @override
   void onHoverEnter() {
     // Only apply hover feedback when not dragging.
-    if (!_isDragging) {
+    if (!isDragging) {
       _isHovering = true;
     }
   }
 
   @override
   void onHoverExit() {
-    if (!_isDragging) {
+    if (!isDragging) {
       _isHovering = false;
     }
   }
@@ -292,27 +291,28 @@ class RayCircleComponent extends CircleComponent
 
   @override
   bool containsLocalPoint(Vector2 point) {
-    var inside = super.containsLocalPoint(point);
-    if (!inside) {
-      inside = point.taxicabDistanceTo(.zero()) <= radius * 2;
-    }
-    return inside;
+    final taxicabDistance = point.x.abs() + point.y.abs();
+    return taxicabDistance <= radius * 2 || super.containsLocalPoint(point);
   }
 
   void _updateFromDrag(Vector2 drag) {
+    drag -= Vector2(radius, radius);
     position += drag;
     ray.origin += drag;
   }
 
   final Ray2 ray;
+
+  bool get isDragging => _isDragging || isDragged;
+  bool get isHovering => _isHovering || isHovered;
+  bool get isActive => isHovering || isDragging;
+
   bool _isDragging = false;
   bool _isHovering = false;
 
-  bool get _isActive => _isHovering || _isDragging;
-
-  Paint get lightPaint => _isActive ? hoveredLightStroke : lightStroke;
-  Paint get redPaint => _isActive ? hoveredRedStroke : redStroke;
-  Paint get greenPaint => _isActive ? hoveredGreenStroke : greenStroke;
+  Paint get _lightPaint => isActive ? hoveredLightStroke : lightStroke;
+  Paint get _redPaint => isActive ? hoveredRedStroke : redStroke;
+  Paint get _greenPaint => isActive ? hoveredGreenStroke : greenStroke;
 }
 
 class RaysInShapeWorld extends World
@@ -322,7 +322,7 @@ class RaysInShapeWorld extends World
   final Map<Ray2, RayCircleComponent> _circles = {};
   Iterable<RayCircleComponent> get circleComponents => _circles.values;
 
-  int get _numRays => 400;
+  int get _numRays => 200;
 
   List<Ray2> randomRays(int count) => List<Ray2>.generate(
     count,
@@ -341,7 +341,7 @@ class RaysInShapeWorld extends World
       final circle = RayCircleComponent(
         ray,
         position: ray.origin.clone(),
-        radius: 1,
+        radius: 2,
         anchor: .center,
         paint: lightStroke,
       );

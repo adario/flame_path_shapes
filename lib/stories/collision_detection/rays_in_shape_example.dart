@@ -16,17 +16,7 @@ import 'package:flame_path_shapes/commons/rounded_rect_component.dart';
 import 'package:flutter/material.dart';
 
 const playArea = Rect.fromLTRB(-100, -100, 100, 100);
-
-extension ElapsedString on Stopwatch {
-  String get elapsedString {
-    final elapsed = elapsedMicroseconds;
-    if (elapsed > 1000) {
-      return '${(elapsed / 1000).toStringAsFixed(1)}ms';
-    } else {
-      return '$elapsedµs';
-    }
-  }
-}
+const fontFamily = 'LEDBoard-7';
 
 class RaysInShapeExample extends FlameGame<RaysInShapeWorld> {
   static const description = '''
@@ -39,11 +29,17 @@ the ray casting/intersection behaviour between the (current) crossings approach
 and the point-containment proposal, which should be used for concave polygons.
 ''';
 
-  TextRenderer get textRenderer =>
-      TextPaint(style: TextStyle(fontSize: 8, color: Colors.white));
+  TextRenderer get textRenderer => TextPaint(
+    style: TextStyle(fontSize: 8, fontFamily: fontFamily, color: Colors.white),
+  );
 
-  TextRenderer get textOffRenderer =>
-      TextPaint(style: TextStyle(fontSize: 8, color: Colors.white54));
+  TextRenderer get textOffRenderer => TextPaint(
+    style: TextStyle(
+      fontSize: 8,
+      fontFamily: fontFamily,
+      color: Colors.white54,
+    ),
+  );
 
   Vector2 get buttonSize => Vector2(32, 12);
 
@@ -417,8 +413,9 @@ class RaysInShapeWorld extends World
   ];
 
   late TextComponent _textComponent;
-  TextPaint get _textRenderer =>
-      TextPaint(style: TextStyle(color: Colors.white, fontSize: 10));
+  TextPaint get _textRenderer => TextPaint(
+    style: TextStyle(color: Colors.white, fontSize: 8, fontFamily: fontFamily),
+  );
 
   PositionComponent get current => _components[_componentIndex];
   PolygonRayIntersection? get polygon {
@@ -435,6 +432,8 @@ class RaysInShapeWorld extends World
   var isRotating = false;
 
   void _forceUpdate() {
+    _resetTimer();
+    _resetTotalTimer();
     _updates = _updatesInterval;
   }
 
@@ -502,8 +501,8 @@ class RaysInShapeWorld extends World
       text: 'Rays #${_rays.length}',
       priority: 1,
       position: Vector2(
-        (playArea.width * 0.5) - 5,
-        (playArea.height * 0.5) - 10,
+        (playArea.width * 0.5) - 2,
+        (playArea.height * 0.5) - 6,
       ),
       anchor: .centerRight,
       textRenderer: _textRenderer,
@@ -514,8 +513,8 @@ class RaysInShapeWorld extends World
         windowSize: _updatesInterval,
         priority: 1,
         position: Vector2(
-          (-playArea.width * 0.5) + 5,
-          (playArea.height * 0.5) - 10,
+          (-playArea.width * 0.5) + 2,
+          (playArea.height * 0.5) - 6,
         ),
         anchor: .centerLeft,
         textRenderer: _textRenderer,
@@ -538,14 +537,43 @@ class RaysInShapeWorld extends World
   final Map<Ray2, RaycastResult<ShapeHitbox>?> _recording = {};
   final int _updatesInterval = 30;
   var _updates = 0;
+  var _totalUpdates = 0;
 
   RaycastResult<ShapeHitbox>? intersections(Ray2 ray) => _recording[ray];
+
+  late DateTime _start;
+  int _elapsed = 0;
+  double _totalElapsed = 0;
+
+  void _startTimer() {
+    _start = DateTime.now();
+  }
+
+  void _advanceTimer() {
+    final delta = DateTime.now().difference(_start);
+    _elapsed += delta.inMicroseconds;
+  }
+
+  void _updateTotalTimer(double elapsed) {
+    _totalElapsed += elapsed;
+    _totalUpdates++;
+  }
+
+  void _resetTimer() {
+    _elapsed = 0;
+    _updates = 0;
+  }
+
+  void _resetTotalTimer() {
+    _totalUpdates = 0;
+    _totalElapsed = 0;
+  }
 
   @override
   void update(double dt) {
     super.update(dt);
 
-    final timer = Stopwatch()..start();
+    _startTimer();
     for (final ray in _rays) {
       final result = collisionDetection.raycast(
         ray,
@@ -553,21 +581,38 @@ class RaysInShapeWorld extends World
       );
       _recording[ray] = result;
     }
-    timer.stop();
+    _advanceTimer();
     if (++_updates >= _updatesInterval) {
-      _updates = 0;
-      _updateTimerText(timer);
+      _updateTimer();
+      _resetTimer();
     }
   }
 
-  void _updateTimerText(Stopwatch timer) {
+  void _updateTimer() {
+    final elapsed = _elapsed / _updates;
+    _updateTotalTimer(elapsed);
+    final total = _totalElapsed / _totalUpdates;
+    _updateTimerText(elapsed, total);
+  }
+
+  void _updateTimerText(double elapsed, double total) {
     var message = '#${_rays.length} ';
     if (polygon != null) {
       message += useContainment ? 'contain ' : 'crossing ';
     } else {
       message += 'circle ';
     }
-    message += timer.elapsedString.padLeft(7);
+
+    message += elapsedString(elapsed).padLeft(7);
+    message += '/${elapsedString(total).padLeft(7)}';
     _textComponent.text = message;
+  }
+
+  String elapsedString(double elapsed) {
+    if (elapsed >= 1000) {
+      return '${(elapsed / 1000).toStringAsFixed(1)}ms';
+    } else {
+      return '${elapsed.toStringAsFixed(1)}us';
+    }
   }
 }

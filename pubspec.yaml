@@ -36,7 +36,6 @@ dependency_overrides:
       path: packages/flame_forge2d
       ref: feat/path-shapes
 
-
 flutter:
   uses-material-design: true
 
@@ -54,3 +53,8 @@ flutter:
     - assets/audio/music/
     - assets/audio/sfx/
     - assets/yarn/
+
+  fonts:
+    - family: LEDBoard-7
+      fonts:
+        - asset: fonts/led_board-7.ttf

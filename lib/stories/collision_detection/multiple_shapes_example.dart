@@ -35,7 +35,8 @@ class MultipleShapesExample extends FlameGame with HasCollisionDetection {
 class MultiShapesWorld extends World with HasGameRef {
   @override
   Future<void> onLoad() async {
-    add(FpsTextComponent(position: Vector2(0, gameRef.size.y - 24)));
+    await super.onLoad();
+    add(FpsTextComponent(position: Vector2(8, gameRef.size.y - 24)));
     final screenHitbox = ScreenHitbox();
     final snowman = CollidableSnowman(
       Vector2.all(150),

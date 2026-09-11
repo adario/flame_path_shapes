@@ -6,6 +6,7 @@ import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/game.dart';
 import 'package:flame_path_shapes/commons/paths.dart';
+import 'package:flutter/material.dart';
 
 enum Shapes { circle, rectangle, polygon, path }
 
@@ -20,7 +21,8 @@ class GestureHitboxesExample extends FlameGame {
   GestureHitboxesExample() : super(world: _GestureHitboxesWorld());
 }
 
-class _GestureHitboxesWorld extends World with TapCallbacks {
+class _GestureHitboxesWorld extends World
+    with TapCallbacks, HasGameRef<GestureHitboxesExample> {
   final _rng = Random();
 
   PositionComponent randomShape(Vector2 position) {
@@ -44,6 +46,21 @@ class _GestureHitboxesWorld extends World with TapCallbacks {
       position: position,
       size: shapeSize,
       angle: shapeAngle,
+    );
+  }
+
+  TextPaint get _textRenderer =>
+      TextPaint(style: TextStyle(color: Colors.white, fontSize: 16));
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    add(
+      FpsTextComponent(
+        position: Vector2((-gameRef.size.x / 2) + 8, (gameRef.size.y / 2) - 24),
+        priority: 1,
+        textRenderer: _textRenderer,
+      ),
     );
   }
 

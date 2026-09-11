@@ -366,7 +366,7 @@ class RaysInShapeWorld extends World
       final circle = RayCircleComponent(
         ray,
         position: ray.origin.clone(),
-        radius: 2,
+        radius: 3,
         anchor: .center,
         paint: lightStroke,
       );

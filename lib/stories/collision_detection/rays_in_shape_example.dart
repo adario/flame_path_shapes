@@ -15,8 +15,12 @@ import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flame_path_shapes/commons/rounded_rect_component.dart';
 import 'package:flutter/material.dart';
 
-const playArea = Rect.fromLTRB(-100, -100, 100, 100);
+const side = 200.0;
+const playArea = Rect.fromLTRB(-side, -side, side, side);
 const fontFamily = 'LEDBoard-7';
+const fontSize = 9.0;
+
+typedef ButtonColors = (Color, Color);
 
 class RaysInShapeExample extends FlameGame<RaysInShapeWorld> {
   static const description = '''
@@ -30,18 +34,22 @@ and the point-containment proposal, which should be used for concave polygons.
 ''';
 
   TextRenderer get textRenderer => TextPaint(
-    style: TextStyle(fontSize: 8, fontFamily: fontFamily, color: Colors.white),
+    style: TextStyle(
+      fontSize: fontSize - 1,
+      fontFamily: fontFamily,
+      color: Colors.white,
+    ),
   );
 
   TextRenderer get textOffRenderer => TextPaint(
     style: TextStyle(
-      fontSize: 8,
+      fontSize: fontSize - 1,
       fontFamily: fontFamily,
       color: Colors.white54,
     ),
   );
 
-  Vector2 get buttonSize => Vector2(32, 12);
+  Vector2 get buttonSize => Vector2(40, 16);
 
   late AdvancedButtonComponent _rotateButton;
   late AdvancedButtonComponent _modeButton;
@@ -70,13 +78,7 @@ and the point-containment proposal, which should be used for concave polygons.
 
   Vector2 get halfSize => size * 0.5;
 
-  AdvancedButtonComponent _createButton(
-    String title,
-    double x,
-    Anchor anchor,
-    Color color,
-    void Function()? action,
-  ) {
+  ButtonColors _getColorsFor(Color color) {
     final disabledColor = color.withValues(alpha: 0.5);
     Color downColor;
     if (color == BasicPalette.orange.color) {
@@ -88,10 +90,24 @@ and the point-containment proposal, which should be used for concave polygons.
     } else {
       downColor = color;
     }
+    return (downColor, disabledColor);
+  }
+
+  AdvancedButtonComponent _createButton(
+    String title,
+    double x,
+    Anchor anchor,
+    Color color,
+    void Function()? action,
+  ) {
+    final colors = _getColorsFor(color);
+    final disabledColor = colors.$2;
+    final downColor = colors.$1;
     return CancellableButtonComponent(
       position: Vector2(x, 2),
       size: buttonSize,
       anchor: anchor,
+      priority: RaysInShapeWorld.hudPriority,
       defaultLabel: TextComponent(text: title, textRenderer: textRenderer),
       disabledLabel: TextComponent(text: title, textRenderer: textOffRenderer),
       defaultSkin: RoundedRectComponent()..setColor(color),
@@ -189,6 +205,15 @@ class RayCircleComponent extends CircleComponent
   });
 
   RaycastResult<ShapeHitbox>? _raycastResult;
+  bool get _hitScreen {
+    final hitbox = _raycastResult?.hitbox;
+    if (hitbox != null) {
+      return hitbox is ScreenHitbox ||
+          (hitbox is RectangleHitbox && hitbox.parent is ScreenHitbox);
+    }
+    return false;
+  }
+
   late final _rayLength = playArea.width * 0.1;
   late Offset _lineTarget;
 
@@ -200,7 +225,11 @@ class RayCircleComponent extends CircleComponent
       paint = _lightPaint;
       _lineTarget = ray.direction.scaled(_rayLength).toOffset();
     } else {
-      paint = _raycastResult!.isInsideHitbox ? _greenPaint : _redPaint;
+      if (_hitScreen) {
+        paint = _lightPaint;
+      } else {
+        paint = _raycastResult!.isInsideHitbox ? _greenPaint : _redPaint;
+      }
       final origin = ray.origin.toOffset();
       _lineTarget = _raycastResult!.intersectionPoint!.toOffset() - origin;
     }
@@ -363,8 +392,12 @@ class RaysInShapeWorld extends World
   static double get rotateAmplitude => pi * 2.0;
   static double get rotateDuration => 10.0;
 
+  static int get hudPriority => 1000;
+  static int get shapePriority => 1;
+
   final _components = [
     CircleComponent(
+      priority: shapePriority,
       radius: _componentSize.x * 0.6,
       anchor: Anchor.center,
       position: Vector2.zero(),
@@ -372,6 +405,7 @@ class RaysInShapeWorld extends World
       children: [CircleHitbox()],
     ),
     RectangleComponent(
+      priority: shapePriority,
       size: _componentSize,
       anchor: Anchor.center,
       position: Vector2.zero(),
@@ -379,6 +413,7 @@ class RaysInShapeWorld extends World
       children: [RectangleHitbox()],
     ),
     PositionComponent(
+      priority: shapePriority,
       position: Vector2.zero(),
       children: [
         PolygonHitbox.relative(
@@ -398,6 +433,7 @@ class RaysInShapeWorld extends World
     ),
     for (var index = 0; index < 5; ++index)
       PositionComponent(
+        priority: shapePriority,
         position: Vector2.zero(),
         children: [
           PolygonHitbox.contour(
@@ -414,7 +450,11 @@ class RaysInShapeWorld extends World
 
   late TextComponent _textComponent;
   TextPaint get _textRenderer => TextPaint(
-    style: TextStyle(color: Colors.white, fontSize: 8, fontFamily: fontFamily),
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: fontSize,
+      fontFamily: fontFamily,
+    ),
   );
 
   PositionComponent get current => _components[_componentIndex];
@@ -497,9 +537,10 @@ class RaysInShapeWorld extends World
   FutureOr<void> onLoad() {
     super.onLoad();
     _addCurrent(current);
+    add(ScreenHitbox());
     _textComponent = TextComponent(
       text: 'Rays #${_rays.length}',
-      priority: 1,
+      priority: hudPriority,
       position: Vector2(
         (playArea.width * 0.5) - 2,
         (playArea.height * 0.5) - 6,
@@ -511,7 +552,7 @@ class RaysInShapeWorld extends World
       FpsTextComponent(
         decimalPlaces: 1,
         windowSize: _updatesInterval,
-        priority: 1,
+        priority: hudPriority,
         position: Vector2(
           (-playArea.width * 0.5) + 2,
           (playArea.height * 0.5) - 6,

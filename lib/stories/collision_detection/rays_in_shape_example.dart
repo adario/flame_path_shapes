@@ -438,7 +438,6 @@ class RaysInShapeWorld extends World
         children: [
           PolygonHitbox.contour(
               indexedPath(index, _pathSize).centered,
-              granularity: 1.0,
               anchor: .center,
               position: Vector2.zero(),
             )

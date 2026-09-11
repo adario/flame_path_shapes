@@ -14,7 +14,7 @@ Path indexedPath(
   Path path;
   switch (index) {
     case 0:
-      return roundRectPath(size);
+      return roundRectPath(size).centered;
     case 1:
       path = flamePath();
     case 2:
@@ -29,7 +29,7 @@ Path indexedPath(
   if (resize) {
     path = path.resizeTo(size, keepRatio: keepRatio);
   }
-  return path;
+  return path.centered;
 }
 
 Path randomPath(Size size, {bool resize = true, bool keepRatio = true}) {

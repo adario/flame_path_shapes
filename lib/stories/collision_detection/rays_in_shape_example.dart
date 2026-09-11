@@ -347,7 +347,7 @@ class RaysInShapeWorld extends World
   final Map<Ray2, RayCircleComponent> _circles = {};
   Iterable<RayCircleComponent> get circleComponents => _circles.values;
 
-  int get _numRays => 200;
+  int get _numRays => 300;
 
   List<Ray2> randomRays(int count) => List<Ray2>.generate(
     count,
@@ -638,7 +638,7 @@ class RaysInShapeWorld extends World
   void _updateTimerText(double elapsed, double total) {
     var message = '#${_rays.length} ';
     if (polygon != null) {
-      message += useContainment ? 'contain ' : 'crossing ';
+      message += useContainment ? 'contain ' : 'odd-cross ';
     } else {
       message += 'circle ';
     }

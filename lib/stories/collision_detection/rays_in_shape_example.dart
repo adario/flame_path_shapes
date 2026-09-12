@@ -431,7 +431,7 @@ class RaysInShapeWorld extends World
           ..renderShape = true,
       ],
     ),
-    for (var index = 0; index < 5; ++index)
+    for (var index = 0; index < numPaths; ++index)
       PositionComponent(
         priority: shapePriority,
         position: Vector2.zero(),

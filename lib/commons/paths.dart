@@ -1,9 +1,50 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flame/collisions.dart';
 import 'package:flame/extensions.dart';
+import 'package:flame/palette.dart';
+import 'package:flame_path_shapes/commons/path_component.dart';
 
 final _rnd = Random();
+
+const shapePriority = 1;
+
+final whiteStroke = Paint()
+  ..color = const Color(0xffffffff)
+  ..style = PaintingStyle.stroke;
+
+final pathStroke = Paint()
+  ..color = BasicPalette.blue.color
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 3
+  ..strokeCap = .round
+  ..strokeJoin = .bevel;
+
+final lightStroke = Paint()
+  ..color = const Color(0x90ffffff)
+  ..style = PaintingStyle.stroke;
+
+final hoveredLightStroke = Paint()
+  ..color = const Color(0xd0ffffff)
+  ..style = PaintingStyle.stroke;
+
+final greenStroke = Paint()
+  ..color = const Color(0xd000ff00)
+  ..style = PaintingStyle.stroke;
+
+final hoveredGreenStroke = Paint()
+  ..color = const Color(0xff00ff00)
+  ..style = PaintingStyle.stroke;
+
+final redStroke = Paint()
+  ..color = const Color(0xd0ff0000)
+  ..style = PaintingStyle.stroke;
+
+final hoveredRedStroke = Paint()
+  ..color = const Color(0xffff0000)
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 1.25;
 
 const pathContourShapeNames = [
   'roundRect',
@@ -18,9 +59,9 @@ const pathContourShapeNames = [
   'setup',
   'recycle',
 ];
-final numPaths = pathContourShapeNames.length;
+final numTestPaths = pathContourShapeNames.length;
 
-Path namedPath(
+Path namedTestPath(
   String name,
   Size size, {
   bool resize = true,
@@ -28,7 +69,7 @@ Path namedPath(
   bool centered = true,
 }) {
   final index = pathContourShapeNames.indexOf(name);
-  return indexedPath(
+  return indexedTestPath(
     index,
     size,
     resize: resize,
@@ -37,14 +78,17 @@ Path namedPath(
   );
 }
 
-Path indexedPath(
+Path indexedTestPath(
   int index,
   Size size, {
   bool resize = true,
   bool keepRatio = true,
   bool centered = true,
 }) {
-  assert(index >= 0 && index < numPaths, 'Invalid common path index $index');
+  assert(
+    index >= 0 && index < numTestPaths,
+    'Invalid common path index $index',
+  );
   Path path;
   switch (index) {
     case 0:
@@ -82,8 +126,86 @@ Path indexedPath(
 }
 
 Path randomPath(Size size, {bool resize = true, bool keepRatio = true}) {
-  final index = _rnd.nextIntBetween(0, numPaths);
-  return indexedPath(index, size, resize: resize, keepRatio: keepRatio);
+  final index = _rnd.nextIntBetween(0, numTestPaths);
+  return indexedTestPath(index, size, resize: resize, keepRatio: keepRatio);
+}
+
+PathComponent pathComponent(
+  int index,
+  Size size, {
+  Vector2? position,
+  Paint? paint,
+  Paint? contourPaint,
+}) {
+  // Create a standard test path with our chosen size but the original
+  // aspect ratio; this is centered by default.
+  final path = indexedPath(index, size);
+
+  // Create a hitbox per each path contour.
+  final hitboxes = hitboxesFor(path, contourPaint);
+
+  // Create a component that displays the whole path: we filter all hitboxes
+  // that are (approximately) fully enclosed in the largest one.
+  return PathComponent(
+    path: path,
+    priority: shapePriority,
+    position: position ?? Vector2.zero(),
+    size: size.toVector2(),
+    paint: paint ?? pathStroke,
+    children: filterHitboxes(hitboxes),
+  )..renderShape = true;
+}
+
+Path indexedPath(int index, Size pathSize) {
+  return indexedTestPath(index % numTestPaths, pathSize);
+}
+
+List<PolygonHitbox> filterHitboxes(List<PolygonHitbox> hitboxes) {
+  if (hitboxes.length < 2) {
+    return hitboxes;
+  }
+  // Sort the hitboxes by size in ascending order: we will use the largest
+  // area in order to approximate full inclusion.
+  hitboxes.sort((a, b) => (b.size.length2 - a.size.length2).toInt());
+  final first = hitboxes.first;
+  final area = Rect.fromCenter(
+    center: first.position.toOffset(),
+    width: first.width,
+    height: first.height,
+  );
+
+  // We always keep the first hitbox (the largest one): the others
+  // are discarded if they fit entirely within it.
+  hitboxes.removeWhere((element) {
+    if (element == first) {
+      return false;
+    }
+    final bounds = Rect.fromCenter(
+      center: element.position.toOffset(),
+      width: element.width,
+      height: element.height,
+    );
+    return area.expandToInclude(bounds) == area;
+  });
+  return hitboxes;
+}
+
+List<PolygonHitbox> hitboxesFor(Path path, [Paint? paint]) {
+  final hitboxes = <PolygonHitbox>[];
+  final contours = path.walkContours();
+  for (final contour in contours) {
+    hitboxes.add(
+      PolygonHitbox(
+          contour.vertices,
+          anchor: .center,
+          position: contour.rectangle.center.toVector2(),
+        )
+        ..priority = shapePriority + 1
+        ..paint = paint ?? whiteStroke
+        ..renderShape = true,
+    );
+  }
+  return hitboxes;
 }
 
 Path roundRectPath(Size size) {

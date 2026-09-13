@@ -11,7 +11,6 @@ import 'package:flame/geometry.dart';
 import 'package:flame/palette.dart';
 import 'package:flame/text.dart';
 import 'package:flame_path_shapes/commons/cancellable_button_component.dart';
-import 'package:flame_path_shapes/commons/path_component.dart';
 import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flame_path_shapes/commons/rounded_rect_component.dart';
 import 'package:flutter/material.dart';
@@ -176,41 +175,6 @@ and the point-containment proposal, which should be used for concave polygons.
     _modeButton.isDisabled = isCircle;
   }
 }
-
-final whiteStroke = Paint()
-  ..color = const Color(0xffffffff)
-  ..style = PaintingStyle.stroke;
-
-final pathStroke = Paint()
-  ..color = BasicPalette.blue.color
-  ..style = PaintingStyle.stroke
-  ..strokeWidth = 3
-  ..strokeCap = .round
-  ..strokeJoin = .bevel;
-
-final lightStroke = Paint()
-  ..color = const Color(0x90ffffff)
-  ..style = PaintingStyle.stroke;
-
-final hoveredLightStroke = Paint()
-  ..color = const Color(0xd0ffffff)
-  ..style = PaintingStyle.stroke;
-
-final greenStroke = Paint()
-  ..color = const Color(0xd000ff00)
-  ..style = PaintingStyle.stroke;
-
-final hoveredGreenStroke = Paint()
-  ..color = const Color(0xff00ff00)
-  ..style = PaintingStyle.stroke;
-
-final redStroke = Paint()
-  ..color = const Color(0xd0ff0000)
-  ..style = PaintingStyle.stroke;
-
-final hoveredRedStroke = Paint()
-  ..color = const Color(0xffff0000)
-  ..style = PaintingStyle.stroke;
 
 class RayCircleComponent extends CircleComponent
     with
@@ -408,7 +372,6 @@ class RaysInShapeWorld extends World
     playArea.width * 0.5,
     playArea.height * 0.5,
   );
-  static final _pathSize = Size(playArea.width * 0.5, playArea.height * 0.5);
 
   static Effect createRotate() {
     return RotateEffect.by(
@@ -421,8 +384,8 @@ class RaysInShapeWorld extends World
   static double get rotateDuration => 20.0;
 
   static int get hudPriority => 1000;
-  static int get shapePriority => 1;
 
+  static final _pathSize = Size(playArea.width * 0.5, playArea.height * 0.5);
   final _components = [
     CircleComponent(
       priority: shapePriority,
@@ -459,82 +422,11 @@ class RaysInShapeWorld extends World
           ..renderShape = true,
       ],
     ),
-    for (var index = 0; index < numPaths; ++index) _pathComponent(index),
+    for (var index = 0; index < numTestPaths; ++index)
+      pathComponent(index, _pathSize),
   ];
 
   final _ignoredHitboxes = <PolygonHitbox>[];
-
-  static PathComponent _pathComponent(int index) {
-    // Create a standard test path with our chosen size but the original
-    // aspect ratio; this is centered by default.
-    final path = _indexedPath(index);
-
-    // Create a hitbox per each path contour.
-    final hitboxes = _hitboxesFor(path);
-
-    // Create a component that displays the whole path: we filter all hitboxes
-    // that are (approximately) fully enclosed in the largest one.
-    return PathComponent(
-        path: path,
-        priority: shapePriority,
-        position: Vector2.zero(),
-        children: _filter(hitboxes),
-      )
-      ..paint = pathStroke
-      ..renderShape = true;
-  }
-
-  static Path _indexedPath(int index) {
-    return indexedPath(index % numPaths, _pathSize);
-  }
-
-  static List<PolygonHitbox> _filter(List<PolygonHitbox> hitboxes) {
-    if (hitboxes.length < 2) {
-      return hitboxes;
-    }
-    // Sort the hitboxes by size in ascending order: we will use the largest
-    // area in order to approximate full inclusion.
-    hitboxes.sort((a, b) => (b.size.length2 - a.size.length2).toInt());
-    final first = hitboxes.first;
-    final area = Rect.fromCenter(
-      center: first.position.toOffset(),
-      width: first.width,
-      height: first.height,
-    );
-
-    // We always keep the first hitbox (the largest one): the others
-    // are discarded if they fit entirely within it.
-    hitboxes.removeWhere((element) {
-      if (element == first) {
-        return false;
-      }
-      final bounds = Rect.fromCenter(
-        center: element.position.toOffset(),
-        width: element.width,
-        height: element.height,
-      );
-      return area.expandToInclude(bounds) == area;
-    });
-    return hitboxes;
-  }
-
-  static List<PolygonHitbox> _hitboxesFor(Path path) {
-    final hitboxes = <PolygonHitbox>[];
-    final contours = path.walkContours();
-    for (final contour in contours) {
-      hitboxes.add(
-        PolygonHitbox(
-            contour.vertices,
-            anchor: .center,
-            position: contour.rectangle.center.toVector2(),
-          )
-          ..priority = shapePriority + 1
-          ..paint = whiteStroke
-          ..renderShape = true,
-      );
-    }
-    return hitboxes;
-  }
 
   late TextComponent _textComponent;
   TextPaint get _textRenderer => TextPaint(
@@ -556,7 +448,7 @@ class RaysInShapeWorld extends World
 
   var _doUpdate = false;
   void _forceUpdate() {
-    _recording.clear();
+    _intersections.clear();
     _doUpdate = true;
     _resetTimer();
     _resetTotalTimer();
@@ -666,13 +558,13 @@ class RaysInShapeWorld extends World
     return null;
   }
 
-  final Map<Ray2, RaycastResult<ShapeHitbox>?> _recording = {};
+  final Map<Ray2, RaycastResult<ShapeHitbox>?> _intersections = {};
   final int _updatesInterval = 30;
   var _totalUpdates = 0;
   final _timings = <double>[];
   late Stopwatch _timer;
 
-  RaycastResult<ShapeHitbox>? intersections(Ray2 ray) => _recording[ray];
+  RaycastResult<ShapeHitbox>? intersections(Ray2 ray) => _intersections[ray];
 
   double _totalElapsed = 0;
 
@@ -720,7 +612,7 @@ class RaysInShapeWorld extends World
         ignoreHitboxes: _ignoredHitboxes,
         useContainment: useContainment,
       );
-      _recording[ray] = result;
+      _intersections[ray] = result;
     }
     final elapsed = _advanceTimer();
     if (elapsed != null) {

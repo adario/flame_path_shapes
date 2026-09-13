@@ -11,6 +11,7 @@ import 'package:flame/geometry.dart';
 import 'package:flame/palette.dart';
 import 'package:flame/text.dart';
 import 'package:flame_path_shapes/commons/cancellable_button_component.dart';
+import 'package:flame_path_shapes/commons/path_component.dart';
 import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flame_path_shapes/commons/rounded_rect_component.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +55,7 @@ and the point-containment proposal, which should be used for concave polygons.
   late AdvancedButtonComponent _rotateButton;
   late AdvancedButtonComponent _modeButton;
   late AdvancedButtonComponent _shapeButton;
+  late AdvancedButtonComponent _raysButton;
 
   RaysInShapeExample()
     : super(
@@ -69,14 +71,21 @@ and the point-containment proposal, which should be used for concave polygons.
     await super.onLoad();
 
     _rotateButton = _createRotateButton();
-    _rotateButton.isDisabled = true;
     _shapeButton = _createShapeButton();
     _modeButton = _createModeButton();
-    _modeButton.isDisabled = true;
-    camera.viewport.addAll([_rotateButton, _shapeButton, _modeButton]);
+    _raysButton = _createRaysButton();
+    _rotateButton.isDisabled = isCircle;
+    _modeButton.isDisabled = isCircle;
+    camera.viewport.addAll([
+      _rotateButton,
+      _raysButton,
+      _shapeButton,
+      _modeButton,
+    ]);
   }
 
   Vector2 get halfSize => size * 0.5;
+  bool get isCircle => world.isCircle;
 
   ButtonColors _getColorsFor(Color color) {
     final disabledColor = color.withValues(alpha: 0.5);
@@ -87,6 +96,8 @@ and the point-containment proposal, which should be used for concave polygons.
       downColor = BasicPalette.lightBlue.color;
     } else if (color == BasicPalette.pink.color) {
       downColor = BasicPalette.lightPink.color;
+    } else if (color == BasicPalette.purple.color) {
+      downColor = BasicPalette.magenta.color;
     } else {
       downColor = color;
     }
@@ -98,13 +109,14 @@ and the point-containment proposal, which should be used for concave polygons.
     double x,
     Anchor anchor,
     Color color,
-    void Function()? action,
-  ) {
+    void Function()? action, {
+    double y = 2,
+  }) {
     final colors = _getColorsFor(color);
     final disabledColor = colors.$2;
     final downColor = colors.$1;
     return CancellableButtonComponent(
-      position: Vector2(x, 2),
+      position: Vector2(x, y),
       size: buttonSize,
       anchor: anchor,
       priority: RaysInShapeWorld.hudPriority,
@@ -143,22 +155,38 @@ and the point-containment proposal, which should be used for concave polygons.
       size.x * 0.5,
       .topCenter,
       BasicPalette.blue.color,
-      () {
-        world.changeShape();
-        final isCircle = world.current is CircleComponent;
-        _rotateButton.isDisabled = isCircle;
-        _modeButton.isDisabled = isCircle;
-        if (isCircle && world.isRotating) {
-          world.toggleRotate();
-        }
-      },
+      () => _changeShape(),
     );
+  }
+
+  AdvancedButtonComponent _createRaysButton() {
+    return _createButton(
+      'Rays',
+      size.x * 0.5,
+      .topCenter,
+      BasicPalette.purple.color,
+      () => world.changeRays(),
+      y: _shapeButton.position.y + buttonSize.y + 2,
+    );
+  }
+
+  void _changeShape() {
+    world.changeShape();
+    _rotateButton.isDisabled = isCircle;
+    _modeButton.isDisabled = isCircle;
   }
 }
 
 final whiteStroke = Paint()
   ..color = const Color(0xffffffff)
   ..style = PaintingStyle.stroke;
+
+final pathStroke = Paint()
+  ..color = BasicPalette.blue.color
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 3
+  ..strokeCap = .round
+  ..strokeJoin = .bevel;
 
 final lightStroke = Paint()
   ..color = const Color(0x90ffffff)
@@ -217,6 +245,8 @@ class RayCircleComponent extends CircleComponent
   late final _rayLength = playArea.width * 0.1;
   late Offset _lineTarget;
 
+  Offset get _lineOffset => Offset(radius, radius);
+
   @override
   void update(double dt) {
     super.update(dt);
@@ -238,10 +268,8 @@ class RayCircleComponent extends CircleComponent
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    canvas.save();
-    canvas.translate(radius, radius);
-    canvas.drawLine(.zero, _lineTarget, paint);
-    canvas.restore();
+    final offset = _lineOffset;
+    canvas.drawLine(offset, _lineTarget + offset, paint);
   }
 
   @override
@@ -390,7 +418,7 @@ class RaysInShapeWorld extends World
   }
 
   static double get rotateAmplitude => pi * 2.0;
-  static double get rotateDuration => 10.0;
+  static double get rotateDuration => 20.0;
 
   static int get hudPriority => 1000;
   static int get shapePriority => 1;
@@ -431,21 +459,83 @@ class RaysInShapeWorld extends World
           ..renderShape = true,
       ],
     ),
-    for (var index = 0; index < numPaths; ++index)
-      PositionComponent(
+    for (var index = 0; index < numPaths; ++index) _pathComponent(index),
+  ];
+
+  final _ignoredHitboxes = <PolygonHitbox>[];
+
+  static PathComponent _pathComponent(int index) {
+    // Create a standard test path with our chosen size but the original
+    // aspect ratio; this is centered by default.
+    final path = _indexedPath(index);
+
+    // Create a hitbox per each path contour.
+    final hitboxes = _hitboxesFor(path);
+
+    // Create a component that displays the whole path: we filter all hitboxes
+    // that are (approximately) fully enclosed in the largest one.
+    return PathComponent(
+        path: path,
         priority: shapePriority,
         position: Vector2.zero(),
-        children: [
-          PolygonHitbox.contour(
-              indexedPath(index, _pathSize).centered,
-              anchor: .center,
-              position: Vector2.zero(),
-            )
-            ..paint = whiteStroke
-            ..renderShape = true,
-        ],
-      ),
-  ];
+        children: _filter(hitboxes),
+      )
+      ..paint = pathStroke
+      ..renderShape = true;
+  }
+
+  static Path _indexedPath(int index) {
+    return indexedPath(index % numPaths, _pathSize);
+  }
+
+  static List<PolygonHitbox> _filter(List<PolygonHitbox> hitboxes) {
+    if (hitboxes.length < 2) {
+      return hitboxes;
+    }
+    // Sort the hitboxes by size in ascending order: we will use the largest
+    // area in order to approximate full inclusion.
+    hitboxes.sort((a, b) => (b.size.length2 - a.size.length2).toInt());
+    final first = hitboxes.first;
+    final area = Rect.fromCenter(
+      center: first.position.toOffset(),
+      width: first.width,
+      height: first.height,
+    );
+
+    // We always keep the first hitbox (the largest one): the others
+    // are discarded if they fit entirely within it.
+    hitboxes.removeWhere((element) {
+      if (element == first) {
+        return false;
+      }
+      final bounds = Rect.fromCenter(
+        center: element.position.toOffset(),
+        width: element.width,
+        height: element.height,
+      );
+      final i = area.expandToInclude(bounds);
+      return i == area;
+    });
+    return hitboxes;
+  }
+
+  static List<PolygonHitbox> _hitboxesFor(Path path) {
+    final hitboxes = <PolygonHitbox>[];
+    final contours = path.walkContours();
+    for (final contour in contours) {
+      hitboxes.add(
+        PolygonHitbox(
+            contour.vertices,
+            anchor: .center,
+            position: contour.rectangle.center.toVector2(),
+          )
+          ..priority = shapePriority + 1
+          ..paint = whiteStroke
+          ..renderShape = true,
+      );
+    }
+    return hitboxes;
+  }
 
   late TextComponent _textComponent;
   TextPaint get _textRenderer => TextPaint(
@@ -458,9 +548,12 @@ class RaysInShapeWorld extends World
 
   PositionComponent get current => _components[_componentIndex];
   PolygonRayIntersection? get polygon {
-    final first = current.children.first;
-    if (first is PolygonRayIntersection) {
-      return first;
+    if (current is PathComponent) {
+      final f = current.children.firstWhere(
+        (element) => element is PolygonHitbox,
+        orElse: () => Component(),
+      );
+      return f is PolygonHitbox ? f : null;
     }
     return null;
   }
@@ -469,6 +562,8 @@ class RaysInShapeWorld extends World
   int? hoveredRay;
   Effect? rotate;
   var isRotating = false;
+
+  bool get isCircle => current is CircleComponent;
 
   void _forceUpdate() {
     _resetTimer();
@@ -500,23 +595,30 @@ class RaysInShapeWorld extends World
   }
 
   void changeShape() {
+    final angle = isRotating && !isCircle ? current.angle : null;
     remove(current);
     _componentIndex = (_componentIndex + 1) % _components.length;
     _addCurrent(current);
+    if (isRotating && angle != null) {
+      current.angle = angle;
+    }
+    _recording.clear();
+  }
+
+  void changeRays() {
     _recording.clear();
     _rays = randomRays(_numRays);
     _createCircles();
     _forceUpdate();
   }
 
-  bool _addRotate(Component component) {
+  void _addRotate(Component component) {
     _removeRotate();
-    if (_componentIndex != 0 && current.children.length < 2) {
+    final Effect? effect = current.firstChild();
+    if (_componentIndex != 0 && effect == null) {
       rotate = createRotate();
       component.add(rotate!);
-      return true;
     }
-    return false;
   }
 
   void _removeRotate() {
@@ -526,7 +628,7 @@ class RaysInShapeWorld extends World
 
   void _addCurrent(PositionComponent component) {
     _removeRotate();
-    if (isRotating) {
+    if (isRotating && !isCircle) {
       _addRotate(component);
     }
     add(component);
@@ -617,6 +719,7 @@ class RaysInShapeWorld extends World
     for (final ray in _rays) {
       final result = collisionDetection.raycast(
         ray,
+        ignoreHitboxes: _ignoredHitboxes,
         useContainment: useContainment,
       );
       _recording[ray] = result;

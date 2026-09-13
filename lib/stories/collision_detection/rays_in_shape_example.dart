@@ -513,8 +513,7 @@ class RaysInShapeWorld extends World
         width: element.width,
         height: element.height,
       );
-      final i = area.expandToInclude(bounds);
-      return i == area;
+      return area.expandToInclude(bounds) == area;
     });
     return hitboxes;
   }
@@ -547,16 +546,6 @@ class RaysInShapeWorld extends World
   );
 
   PositionComponent get current => _components[_componentIndex];
-  PolygonRayIntersection? get polygon {
-    if (current is PathComponent) {
-      final f = current.children.firstWhere(
-        (element) => element is PolygonHitbox,
-        orElse: () => Component(),
-      );
-      return f is PolygonHitbox ? f : null;
-    }
-    return null;
-  }
 
   var useContainment = false;
   int? hoveredRay;
@@ -565,10 +554,12 @@ class RaysInShapeWorld extends World
 
   bool get isCircle => current is CircleComponent;
 
+  var _doUpdate = false;
   void _forceUpdate() {
+    _recording.clear();
+    _doUpdate = true;
     _resetTimer();
     _resetTotalTimer();
-    _updates = _updatesInterval;
   }
 
   void toggleRotate() {
@@ -602,11 +593,10 @@ class RaysInShapeWorld extends World
     if (isRotating && angle != null) {
       current.angle = angle;
     }
-    _recording.clear();
+    _forceUpdate();
   }
 
   void changeRays() {
-    _recording.clear();
     _rays = randomRays(_numRays);
     _createCircles();
     _forceUpdate();
@@ -678,22 +668,31 @@ class RaysInShapeWorld extends World
 
   final Map<Ray2, RaycastResult<ShapeHitbox>?> _recording = {};
   final int _updatesInterval = 30;
-  var _updates = 0;
   var _totalUpdates = 0;
+  final _timings = <double>[];
+  late Stopwatch _timer;
 
   RaycastResult<ShapeHitbox>? intersections(Ray2 ray) => _recording[ray];
 
-  late DateTime _start;
-  int _elapsed = 0;
   double _totalElapsed = 0;
 
   void _startTimer() {
-    _start = DateTime.now();
+    _timer = Stopwatch()..start();
   }
 
-  void _advanceTimer() {
-    final delta = DateTime.now().difference(_start);
-    _elapsed += delta.inMicroseconds;
+  double? _advanceTimer() {
+    _timer.stop();
+    _timings.add(_timer.elapsedMicroseconds.toDouble());
+    if (_doUpdate || _timings.length >= _updatesInterval) {
+      if (_doUpdate) {
+        _doUpdate = false;
+        return 0;
+      } else {
+        _timings.sort();
+        return _timings[_timings.length ~/ 2];
+      }
+    }
+    return null;
   }
 
   void _updateTotalTimer(double elapsed) {
@@ -702,8 +701,7 @@ class RaysInShapeWorld extends World
   }
 
   void _resetTimer() {
-    _elapsed = 0;
-    _updates = 0;
+    _timings.clear();
   }
 
   void _resetTotalTimer() {
@@ -724,15 +722,14 @@ class RaysInShapeWorld extends World
       );
       _recording[ray] = result;
     }
-    _advanceTimer();
-    if (++_updates >= _updatesInterval) {
-      _updateTimer();
+    final elapsed = _advanceTimer();
+    if (elapsed != null) {
+      _updateTimer(elapsed);
       _resetTimer();
     }
   }
 
-  void _updateTimer() {
-    final elapsed = _elapsed / _updates;
+  void _updateTimer(double elapsed) {
     _updateTotalTimer(elapsed);
     final total = _totalElapsed / _totalUpdates;
     _updateTimerText(elapsed, total);
@@ -740,7 +737,7 @@ class RaysInShapeWorld extends World
 
   void _updateTimerText(double elapsed, double total) {
     var message = '#${_rays.length} ';
-    if (polygon != null) {
+    if (!isCircle) {
       message += useContainment ? 'contain ' : 'odd-cross ';
     } else {
       message += 'circle ';

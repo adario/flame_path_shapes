@@ -6,8 +6,8 @@ import 'package:flame_path_shapes/commons/commons.dart';
 import 'package:flame_path_shapes/stories/collision_detection/multiple_shapes_example.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/multiple_worlds_example.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/quadtree_example.dart';
-// import 'package:flame_path_shapes/stories/collision_detection/raycast_example.dart';
-// import 'package:flame_path_shapes/stories/collision_detection/raycast_light_example.dart';
+import 'package:flame_path_shapes/stories/collision_detection/raycast_example.dart';
+import 'package:flame_path_shapes/stories/collision_detection/raycast_light_example.dart';
 import 'package:flame_path_shapes/stories/collision_detection/rays_in_shape_example.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/raytrace_example.dart';
 import 'package:flame/game.dart';
@@ -53,18 +53,18 @@ void addCollisionDetectionStories(Dashbook dashbook) {
     //   codeLink: baseLink('collision_detection/quadtree_example.dart'),
     //   info: QuadTreeExample.description,
     // )
-    // ..add(
-    //   'Raycasting (light)',
-    //   (_) => GameWidget(game: RaycastLightExample()),
-    //   codeLink: baseLink('collision_detection/raycast_light_example.dart'),
-    //   info: RaycastLightExample.description,
-    // )
-    // ..add(
-    //   'Raycasting',
-    //   (_) => GameWidget(game: RaycastExample()),
-    //   codeLink: baseLink('collision_detection/raycast_example.dart'),
-    //   info: RaycastExample.description,
-    // )
+    ..add(
+      'Raycasting (light)',
+      (_) => GameWidget(game: RaycastLightExample()),
+      codeLink: baseLink('collision_detection/raycast_light_example.dart'),
+      info: RaycastLightExample.description,
+    )
+    ..add(
+      'Raycasting',
+      (_) => GameWidget(game: RaycastExample()),
+      codeLink: baseLink('collision_detection/raycast_example.dart'),
+      info: RaycastExample.description,
+    )
     // ..add(
     //   'Raytracing',
     //   (_) => GameWidget(game: RaytraceExample()),

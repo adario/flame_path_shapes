@@ -227,7 +227,7 @@ class RayCircleComponent extends CircleComponent
       final origin = ray.origin.toOffset();
       _lineTarget = _raycastResult!.intersectionPoint!.toOffset() - origin;
     }
-    _updateLineSegment();
+    _lineSegment = _segment();
   }
 
   @override
@@ -239,15 +239,13 @@ class RayCircleComponent extends CircleComponent
 
   @override
   void onMouseMove(MouseMoveEvent event) {
-    if (worldRef.hasHovering == false ||
-        (worldRef.numHovering == 1 && worldRef.isHovering(this))) {
+    if (worldRef.hasHovering == false || worldRef.isHovering(this)) {
       super.onMouseMove(event);
     }
   }
 
   @override
   void onHoverEnter() {
-    // Only apply hover feedback when not dragging.
     if (!isDragging) {
       _isHovering = true;
     }
@@ -270,12 +268,6 @@ class RayCircleComponent extends CircleComponent
   @override
   void onTapDown(TapDownEvent event) {
     _isDragging = true;
-
-    // Guard against invalid local event positions.
-    var local = event.localPosition;
-    if (local.x.isNaN || local.y.isNaN) {
-      local = absoluteToLocal(event.canvasPosition);
-    }
   }
 
   @override
@@ -317,72 +309,36 @@ class RayCircleComponent extends CircleComponent
     _isDragging = false;
   }
 
+  final _segmentFactor = pi * 10;
+
   @override
   bool containsLocalPoint(Vector2 point) {
+    _lineDrag = false;
+    final length = radius * 2;
     final taxiDistance = point.x.abs() + point.y.abs();
-    var result = taxiDistance <= radius * 2 || super.containsLocalPoint(point);
+    var result = taxiDistance <= length || super.containsLocalPoint(point);
     if (!result) {
-      result = _pointInSegment(point, radius);
-    } else {
-      _lineDrag = null;
+      // TODO: Why the enormous factor to pick correctly within the epsilon...?
+      result = _lineSegment.containsPoint(
+        point,
+        epsilon: length * _segmentFactor,
+      );
+      _lineDrag = result;
     }
     return result;
   }
 
   late var _lineSegment = LineSegment.zero();
-  var _linePoints = <Vector2>[];
-  Vector2? _lineDrag;
-
-  void _updateLineSegment([int spread = 0]) {
-    final segment = _segment();
-    if (!_sameSegment(segment)) {
-      _lineSegment = segment;
-      if (spread <= 3) {
-        final length = _lineSegment.length;
-        spread = max(length ~/ 3, 3);
-      }
-      _linePoints = _lineSegment.spread(spread);
-      _linePoints.add(_lineSegment.to);
-    }
-  }
-
-  bool _sameSegment(LineSegment segment) {
-    return segment.from == _lineSegment.from && segment.to == _lineSegment.to;
-  }
-
-  bool _pointInSegment(Vector2 point, double length) {
-    if (_segmentRect(_lineSegment).containsPoint(point)) {
-      length *= length;
-      for (final p in _linePoints) {
-        if (point.distanceToSquared(p) < length) {
-          _lineDrag = p;
-          return true;
-        }
-      }
-    }
-    _lineDrag = null;
-    return false;
-  }
+  var _lineDrag = false;
 
   LineSegment _segment([Vector2? offset]) {
     offset ??= _lineOffset.toVector2();
     return LineSegment(offset, offset + _lineTarget.toVector2());
   }
 
-  Rect _segmentRect([LineSegment? segment, Vector2? offset]) {
-    segment ??= _segment(offset);
-    final width = (segment.to.x - segment.from.x).abs();
-    final height = (segment.to.y - segment.from.y).abs();
-    return Rect.fromCenter(
-      center: segment.midpoint.toOffset(),
-      width: width,
-      height: height,
-    );
-  }
-
   void _updateFromDrag(Vector2 drag) {
     drag -= Vector2(radius, radius);
-    if (_lineDrag != null) {
+    if (_lineDrag) {
       final dir = ray.direction + drag.normalized();
       ray.direction = dir.normalized();
     } else {

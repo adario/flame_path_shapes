@@ -27,21 +27,38 @@ final lightStroke = Paint()
 
 final hoveredLightStroke = Paint()
   ..color = const Color(0xd0ffffff)
-  ..style = PaintingStyle.stroke;
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 1.05;
+
+final activeLightStroke = Paint()
+  ..color = const Color(0xe0ffffff)
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 1.25;
 
 final greenStroke = Paint()
   ..color = const Color(0xd000ff00)
   ..style = PaintingStyle.stroke;
 
 final hoveredGreenStroke = Paint()
+  ..color = const Color(0xef00ff00)
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 1.05;
+
+final activeGreenStroke = Paint()
   ..color = const Color(0xff00ff00)
-  ..style = PaintingStyle.stroke;
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 1.25;
 
 final redStroke = Paint()
   ..color = const Color(0xd0ff0000)
   ..style = PaintingStyle.stroke;
 
 final hoveredRedStroke = Paint()
+  ..color = const Color(0xe0ff0000)
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 1.05;
+
+final activeRedStroke = Paint()
   ..color = const Color(0xffff0000)
   ..style = PaintingStyle.stroke
   ..strokeWidth = 1.25;

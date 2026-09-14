@@ -227,6 +227,7 @@ class RayCircleComponent extends CircleComponent
       final origin = ray.origin.toOffset();
       _lineTarget = _raycastResult!.intersectionPoint!.toOffset() - origin;
     }
+    _updateLineSegment();
   }
 
   @override
@@ -237,11 +238,20 @@ class RayCircleComponent extends CircleComponent
   }
 
   @override
+  void onMouseMove(MouseMoveEvent event) {
+    if (worldRef.hasHovering == false ||
+        (worldRef.numHovering == 1 && worldRef.isHovering(this))) {
+      super.onMouseMove(event);
+    }
+  }
+
+  @override
   void onHoverEnter() {
     // Only apply hover feedback when not dragging.
     if (!isDragging) {
       _isHovering = true;
     }
+    worldRef.addHovering(this);
   }
 
   @override
@@ -249,6 +259,7 @@ class RayCircleComponent extends CircleComponent
     if (!isDragging) {
       _isHovering = false;
     }
+    worldRef.removeHovering(this);
   }
 
   @override
@@ -308,28 +319,95 @@ class RayCircleComponent extends CircleComponent
 
   @override
   bool containsLocalPoint(Vector2 point) {
-    final taxicabDistance = point.x.abs() + point.y.abs();
-    return taxicabDistance <= radius * 2 || super.containsLocalPoint(point);
+    final taxiDistance = point.x.abs() + point.y.abs();
+    var result = taxiDistance <= radius * 2 || super.containsLocalPoint(point);
+    if (!result) {
+      result = _pointInSegment(point, radius);
+    } else {
+      _lineDrag = null;
+    }
+    return result;
+  }
+
+  late var _lineSegment = LineSegment.zero();
+  var _linePoints = <Vector2>[];
+  Vector2? _lineDrag;
+
+  void _updateLineSegment([int spread = 0]) {
+    final segment = _segment();
+    if (!_sameSegment(segment)) {
+      _lineSegment = segment;
+      if (spread <= 3) {
+        final length = _lineSegment.length;
+        spread = max(length ~/ 3, 3);
+      }
+      _linePoints = _lineSegment.spread(spread);
+      _linePoints.add(_lineSegment.to);
+    }
+  }
+
+  bool _sameSegment(LineSegment segment) {
+    return segment.from == _lineSegment.from && segment.to == _lineSegment.to;
+  }
+
+  bool _pointInSegment(Vector2 point, double length) {
+    if (_segmentRect(_lineSegment).containsPoint(point)) {
+      length *= length;
+      for (final p in _linePoints) {
+        if (point.distanceToSquared(p) < length) {
+          _lineDrag = p;
+          return true;
+        }
+      }
+    }
+    _lineDrag = null;
+    return false;
+  }
+
+  LineSegment _segment([Vector2? offset]) {
+    offset ??= _lineOffset.toVector2();
+    return LineSegment(offset, offset + _lineTarget.toVector2());
+  }
+
+  Rect _segmentRect([LineSegment? segment, Vector2? offset]) {
+    segment ??= _segment(offset);
+    final width = (segment.to.x - segment.from.x).abs();
+    final height = (segment.to.y - segment.from.y).abs();
+    return Rect.fromCenter(
+      center: segment.midpoint.toOffset(),
+      width: width,
+      height: height,
+    );
   }
 
   void _updateFromDrag(Vector2 drag) {
     drag -= Vector2(radius, radius);
-    position += drag;
-    ray.origin += drag;
+    if (_lineDrag != null) {
+      final dir = ray.direction + drag.normalized();
+      ray.direction = dir.normalized();
+    } else {
+      position += drag;
+      ray.origin += drag;
+    }
   }
 
   final Ray2 ray;
 
   bool get isDragging => _isDragging || isDragged;
   bool get isHovering => _isHovering || isHovered;
-  bool get isActive => isHovering || isDragging;
 
   bool _isDragging = false;
   bool _isHovering = false;
 
-  Paint get _lightPaint => isActive ? hoveredLightStroke : lightStroke;
-  Paint get _redPaint => isActive ? hoveredRedStroke : redStroke;
-  Paint get _greenPaint => isActive ? hoveredGreenStroke : greenStroke;
+  Paint get _lightPaint => isDragging
+      ? activeLightStroke
+      : (isHovering ? hoveredLightStroke : lightStroke);
+  Paint get _redPaint => isDragging
+      ? activeRedStroke
+      : (isHovering ? hoveredRedStroke : redStroke);
+  Paint get _greenPaint => isDragging
+      ? activeGreenStroke
+      : (isHovering ? hoveredGreenStroke : greenStroke);
 }
 
 class RaysInShapeWorld extends World
@@ -339,7 +417,7 @@ class RaysInShapeWorld extends World
   final Map<Ray2, RayCircleComponent> _circles = {};
   Iterable<RayCircleComponent> get circleComponents => _circles.values;
 
-  int get _numRays => 300;
+  int get _numRays => 200;
 
   List<Ray2> randomRays(int count) => List<Ray2>.generate(
     count,
@@ -352,6 +430,7 @@ class RaysInShapeWorld extends World
   );
 
   void _createCircles() {
+    _hovering.clear();
     removeAll(circleComponents);
     _circles.clear();
     for (final ray in _rays) {
@@ -439,6 +518,22 @@ class RaysInShapeWorld extends World
 
   PositionComponent get current => _components[_componentIndex];
 
+  bool addHovering(RayCircleComponent circle) {
+    return _hovering.add(circle);
+  }
+
+  bool removeHovering(RayCircleComponent circle) {
+    return _hovering.remove(circle);
+  }
+
+  bool isHovering(RayCircleComponent circle) {
+    return _hovering.contains(circle);
+  }
+
+  int get numHovering => _hovering.length;
+  bool get hasHovering => _hovering.isNotEmpty;
+
+  final _hovering = <RayCircleComponent>{};
   var useContainment = false;
   int? hoveredRay;
   Effect? rotate;
@@ -547,15 +642,6 @@ class RaysInShapeWorld extends World
     ]);
     _rays = randomRays(_numRays);
     _createCircles();
-  }
-
-  Ray2? rayAtPoint(Vector2 point) {
-    for (final ray in _rays) {
-      if (point.taxicabDistanceTo(ray.origin) < 2) {
-        return ray;
-      }
-    }
-    return null;
   }
 
   final Map<Ray2, RaycastResult<ShapeHitbox>?> _intersections = {};

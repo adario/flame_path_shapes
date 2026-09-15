@@ -52,7 +52,6 @@ and the point-containment proposal, which should be used for concave polygons.
   Vector2 get buttonSize => Vector2(40, 16);
 
   late AdvancedButtonComponent _rotateButton;
-  late AdvancedButtonComponent _modeButton;
   late AdvancedButtonComponent _shapeButton;
   late AdvancedButtonComponent _raysButton;
 
@@ -71,16 +70,9 @@ and the point-containment proposal, which should be used for concave polygons.
 
     _rotateButton = _createRotateButton();
     _shapeButton = _createShapeButton();
-    _modeButton = _createModeButton();
     _raysButton = _createRaysButton();
     _rotateButton.isDisabled = isCircle;
-    _modeButton.isDisabled = isCircle;
-    camera.viewport.addAll([
-      _rotateButton,
-      _raysButton,
-      _shapeButton,
-      _modeButton,
-    ]);
+    camera.viewport.addAll([_rotateButton, _raysButton, _shapeButton]);
   }
 
   Vector2 get halfSize => size * 0.5;
@@ -138,16 +130,6 @@ and the point-containment proposal, which should be used for concave polygons.
     );
   }
 
-  AdvancedButtonComponent _createModeButton() {
-    return _createButton(
-      'Mode',
-      size.x - 2,
-      .topRight,
-      BasicPalette.pink.color,
-      () => world.toggleContainment(),
-    );
-  }
-
   AdvancedButtonComponent _createShapeButton() {
     return _createButton(
       'Shape',
@@ -161,18 +143,16 @@ and the point-containment proposal, which should be used for concave polygons.
   AdvancedButtonComponent _createRaysButton() {
     return _createButton(
       'Rays',
-      size.x * 0.5,
-      .topCenter,
+      size.x - 2,
+      .topRight,
       BasicPalette.purple.color,
       () => world.changeRays(),
-      y: _shapeButton.position.y + buttonSize.y + 2,
     );
   }
 
   void _changeShape() {
     world.changeShape();
     _rotateButton.isDisabled = isCircle;
-    _modeButton.isDisabled = isCircle;
   }
 }
 
@@ -519,15 +499,6 @@ class RaysInShapeWorld extends World
     _forceUpdate();
   }
 
-  void toggleContainment() {
-    if (_componentIndex == 0) {
-      // Not available on the circle.
-      return;
-    }
-    useContainment = !useContainment;
-    _forceUpdate();
-  }
-
   void changeShape() {
     final angle = isRotating && !isCircle ? current.angle : null;
     remove(current);
@@ -652,7 +623,6 @@ class RaysInShapeWorld extends World
       final result = collisionDetection.raycast(
         ray,
         ignoreHitboxes: _ignoredHitboxes,
-        useContainment: useContainment,
       );
       _intersections[ray] = result;
     }
@@ -671,12 +641,21 @@ class RaysInShapeWorld extends World
 
   void _updateTimerText(double elapsed, double total) {
     var message = '#${_rays.length} ';
-    if (!isCircle) {
-      message += useContainment ? 'contain ' : 'odd-cross ';
-    } else {
-      message += 'circle ';
+    var shape = '';
+    switch (_componentIndex) {
+      case 0:
+        shape = 'circle';
+        break;
+      case 1:
+        shape = 'rectangle';
+        break;
+      case 2:
+        shape = 'relative';
+        break;
+      default:
+        shape = pathContourShapeNames[_componentIndex - 3];
     }
-
+    message += '$shape ';
     message += elapsedString(elapsed).padLeft(7);
     message += '/${elapsedString(total).padLeft(7)}';
     _textComponent.text = message;

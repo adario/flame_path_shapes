@@ -39,7 +39,11 @@ class _GestureHitboxesWorld extends World
         Vector2.random(_rng),
         Vector2.random(_rng)..y *= -1,
       ], parentSize: shapeSize),
-      Shapes.path => PolygonHitbox.contour(randomPath(shapeSize.toSize())),
+      Shapes.path => PolygonHitbox.contour(
+        randomPath(shapeSize.toSize()),
+        position: shapeSize * 0.5,
+        anchor: .center,
+      ),
     };
     return MyShapeComponent(
       hitbox: hitbox,

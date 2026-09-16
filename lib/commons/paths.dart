@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/palette.dart';
 import 'package:flame_path_shapes/commons/path_component.dart';
@@ -153,6 +154,7 @@ PathComponent pathComponent(
   Paint? paint,
   Paint? contourPaint,
   bool? renderHitboxes,
+  Anchor? anchor,
 }) {
   // Create a standard test path with our chosen size but the original
   // aspect ratio; this is centered by default.
@@ -165,6 +167,7 @@ PathComponent pathComponent(
     priority: shapePriority,
     position: position ?? Vector2.zero(),
     size: size.toVector2(),
+    anchor: anchor,
     paint: paint ?? pathStroke,
     hitboxesPaint: contourPaint,
     renderHitboxes: renderHitboxes ?? false,

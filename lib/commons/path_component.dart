@@ -6,9 +6,12 @@ import 'package:flame/geometry.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/palette.dart';
 
-class PathComponent extends ShapeComponent {
+class PathComponent extends ShapeComponent
+    with CollisionCallbacks, CollisionPassthrough {
   PathComponent({
     required this.path,
+    this.addHitboxes = false,
+    this.loadHitboxes = true,
     this.hasHitboxes = true,
     this.renderHitboxes = false,
     this.hitboxesPaint,
@@ -22,20 +25,32 @@ class PathComponent extends ShapeComponent {
     super.key,
     super.paint,
     super.paintLayers,
-  });
+  }) {
+    if (addHitboxes) {
+      _addHitboxes();
+    }
+  }
 
   final Path path;
   final bool hasHitboxes;
   final bool renderHitboxes;
   final Paint? hitboxesPaint;
 
+  List<PolygonHitbox> get hitboxes => _hitboxes;
+
+  late bool addHitboxes;
+  late bool loadHitboxes;
+
+  var _hitboxesAdded = false;
+  late final _hitboxes = _hitboxesFor(path);
   late final whiteStroke = BasicPalette.white.paint()..style = .stroke;
 
   @override
   FutureOr<void> onLoad() async {
     await super.onLoad();
-    final hitboxes = _hitboxesFor(path);
-    addAll(_filterHitboxes(hitboxes));
+    if (loadHitboxes) {
+      _addHitboxes();
+    }
   }
 
   @override
@@ -57,6 +72,14 @@ class PathComponent extends ShapeComponent {
     canvas.drawPath(path, debugPaint);
   }
 
+  void _addHitboxes() {
+    if (_hitboxesAdded) {
+      return;
+    }
+    addAll(_filterHitboxes(hitboxes));
+    _hitboxesAdded = true;
+  }
+
   List<PolygonHitbox> _filterHitboxes(List<PolygonHitbox> hitboxes) {
     if (hitboxes.length < 2) {
       return hitboxes;
@@ -66,7 +89,7 @@ class PathComponent extends ShapeComponent {
     hitboxes.sort((a, b) => (b.size.length2 - a.size.length2).toInt());
     final first = hitboxes.first;
     final area = Rect.fromCenter(
-      center: first.position.toOffset(),
+      center: Offset(first.x, first.y),
       width: first.width,
       height: first.height,
     );
@@ -78,7 +101,7 @@ class PathComponent extends ShapeComponent {
         return false;
       }
       final bounds = Rect.fromCenter(
-        center: element.position.toOffset(),
+        center: Offset(element.x, element.y),
         width: element.width,
         height: element.height,
       );

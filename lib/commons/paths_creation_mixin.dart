@@ -73,7 +73,11 @@ mixin PathsCreationMixin on FlameGame {
     );
   }
 
-  void addTestPaths(Paint paint, [int numPaths = 5]) {
+  void addTestPaths(
+    Paint paint, [
+    int numPaths = 5,
+    bool renderHitboxes = false,
+  ]) {
     final pathSize = Size.square(100);
     for (var index = 0; index < numPaths; ++index) {
       final pathIndex = nextRandomPath;
@@ -83,6 +87,7 @@ mixin PathsCreationMixin on FlameGame {
           Size.square(100),
           position: randomPosition(pathSize),
           paint: paint,
+          renderHitboxes: renderHitboxes,
         ),
       );
     }

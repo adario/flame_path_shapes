@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:flame/collisions.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/palette.dart';
 import 'package:flame_path_shapes/commons/path_component.dart';
@@ -153,13 +152,11 @@ PathComponent pathComponent(
   Vector2? position,
   Paint? paint,
   Paint? contourPaint,
+  bool? renderHitboxes,
 }) {
   // Create a standard test path with our chosen size but the original
   // aspect ratio; this is centered by default.
   final path = indexedPath(index, size);
-
-  // Create a hitbox per each path contour.
-  final hitboxes = hitboxesFor(path, contourPaint);
 
   // Create a component that displays the whole path: we filter all hitboxes
   // that are (approximately) fully enclosed in the largest one.
@@ -169,60 +166,13 @@ PathComponent pathComponent(
     position: position ?? Vector2.zero(),
     size: size.toVector2(),
     paint: paint ?? pathStroke,
-    children: filterHitboxes(hitboxes),
+    hitboxesPaint: contourPaint,
+    renderHitboxes: renderHitboxes ?? false,
   )..renderShape = true;
 }
 
 Path indexedPath(int index, Size pathSize) {
   return indexedTestPath(index % numTestPaths, pathSize);
-}
-
-List<PolygonHitbox> filterHitboxes(List<PolygonHitbox> hitboxes) {
-  if (hitboxes.length < 2) {
-    return hitboxes;
-  }
-  // Sort the hitboxes by size in ascending order: we will use the largest
-  // area in order to approximate full inclusion.
-  hitboxes.sort((a, b) => (b.size.length2 - a.size.length2).toInt());
-  final first = hitboxes.first;
-  final area = Rect.fromCenter(
-    center: first.position.toOffset(),
-    width: first.width,
-    height: first.height,
-  );
-
-  // We always keep the first hitbox (the largest one): the others
-  // are discarded if they fit entirely within it.
-  hitboxes.removeWhere((element) {
-    if (element == first) {
-      return false;
-    }
-    final bounds = Rect.fromCenter(
-      center: element.position.toOffset(),
-      width: element.width,
-      height: element.height,
-    );
-    return area.expandToInclude(bounds) == area;
-  });
-  return hitboxes;
-}
-
-List<PolygonHitbox> hitboxesFor(Path path, [Paint? paint]) {
-  final hitboxes = <PolygonHitbox>[];
-  final contours = path.walkContours();
-  for (final contour in contours) {
-    hitboxes.add(
-      PolygonHitbox(
-          contour.vertices,
-          anchor: .center,
-          position: contour.rectangle.center.toVector2(),
-        )
-        ..priority = shapePriority + 1
-        ..paint = paint ?? whiteStroke
-        ..renderShape = true,
-    );
-  }
-  return hitboxes;
 }
 
 Path roundRectPath(Size size) {

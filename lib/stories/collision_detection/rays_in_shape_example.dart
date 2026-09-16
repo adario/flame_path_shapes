@@ -438,7 +438,7 @@ class RaysInShapeWorld extends World
       ],
     ),
     for (var index = 0; index < numTestPaths; ++index)
-      pathComponent(index, _pathSize),
+      pathComponent(index, _pathSize, renderHitboxes: true),
   ];
 
   final _ignoredHitboxes = <PolygonHitbox>[];

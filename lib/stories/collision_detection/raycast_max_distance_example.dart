@@ -79,7 +79,7 @@ This examples showcases how raycast APIs can be used to detect hits within certa
       path,
       size.toSize(),
       position: Vector2(0, size.y / 2),
-      paint: BasicPalette.red.paint(),
+      paint: BasicPalette.red.paint()..style = .stroke,
     )..anchor = .center;
     component.add(
       MoveByEffect(

@@ -10,7 +10,7 @@ import 'package:flame_path_shapes/stories/collision_detection/raycast_example.da
 import 'package:flame_path_shapes/stories/collision_detection/raycast_light_example.dart';
 import 'package:flame_path_shapes/stories/collision_detection/raycast_max_distance_example.dart';
 import 'package:flame_path_shapes/stories/collision_detection/rays_in_shape_example.dart';
-// import 'package:flame_path_shapes/stories/collision_detection/raytrace_example.dart';
+import 'package:flame_path_shapes/stories/collision_detection/raytrace_example.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/widgets.dart';
 
@@ -66,12 +66,12 @@ void addCollisionDetectionStories(Dashbook dashbook) {
       codeLink: baseLink('collision_detection/raycast_example.dart'),
       info: RaycastExample.description,
     )
-    // ..add(
-    //   'Raytracing',
-    //   (_) => GameWidget(game: RaytraceExample()),
-    //   codeLink: baseLink('collision_detection/raytrace_example.dart'),
-    //   info: RaytraceExample.description,
-    // )
+    ..add(
+      'Raytracing',
+      (_) => GameWidget(game: RaytraceExample()),
+      codeLink: baseLink('collision_detection/raytrace_example.dart'),
+      info: RaytraceExample.description,
+    )
     ..add(
       'Raycasting Max Distance',
       (_) => GameWidget(game: RaycastMaxDistanceExample()),

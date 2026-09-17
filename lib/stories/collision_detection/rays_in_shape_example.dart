@@ -29,7 +29,7 @@ the rays are inside the shapes or not. Double-click to change the shape that the
 are casted against. The rays originates from small circles, and if the circle is
 inside the shape it will be red, otherwise green. And if the ray doesn't hit any
 shape it will be gray. Click once in all shapes but the circle to toggle
-the ray casting/intersection behaviour between the (current) crossings approach
+the ray casting/intersection behavior between the (current) crossings approach
 and the point-containment proposal, which should be used for concave polygons.
 ''';
 
@@ -136,7 +136,7 @@ and the point-containment proposal, which should be used for concave polygons.
       size.x * 0.5,
       .topCenter,
       BasicPalette.blue.color,
-      () => _changeShape(),
+      _changeShape,
     );
   }
 
@@ -298,7 +298,7 @@ class RayCircleComponent extends CircleComponent
     final taxiDistance = point.x.abs() + point.y.abs();
     var result = taxiDistance <= length || super.containsLocalPoint(point);
     if (!result) {
-      // TODO: Why the enormous factor to pick correctly within the epsilon...?
+      // Why the enormous factor to pick correctly within the epsilon...?
       result = _lineSegment.containsPoint(
         point,
         epsilon: length * _segmentFactor,
@@ -317,13 +317,13 @@ class RayCircleComponent extends CircleComponent
   }
 
   void _updateFromDrag(Vector2 drag) {
-    drag -= Vector2(radius, radius);
+    final delta = drag - Vector2(radius, radius);
     if (_lineDrag) {
-      final dir = ray.direction + drag.normalized();
+      final dir = ray.direction + delta.normalized();
       ray.direction = dir.normalized();
     } else {
-      position += drag;
-      ray.origin += drag;
+      position += delta;
+      ray.origin += delta;
     }
   }
 
@@ -470,10 +470,9 @@ class RaysInShapeWorld extends World
   bool get hasHovering => _hovering.isNotEmpty;
 
   final _hovering = <RayCircleComponent>{};
-  var useContainment = false;
   int? hoveredRay;
   Effect? rotate;
-  var isRotating = false;
+  bool isRotating = false;
 
   bool get isCircle => current is CircleComponent;
 
@@ -518,7 +517,7 @@ class RaysInShapeWorld extends World
 
   void _addRotate(Component component) {
     _removeRotate();
-    final Effect? effect = current.firstChild();
+    final effect = current.firstChild<Effect>();
     if (_componentIndex != 0 && effect == null) {
       rotate = createRotate();
       component.add(rotate!);
@@ -645,13 +644,10 @@ class RaysInShapeWorld extends World
     switch (_componentIndex) {
       case 0:
         shape = 'circle';
-        break;
       case 1:
         shape = 'rectangle';
-        break;
       case 2:
         shape = 'relative';
-        break;
       default:
         shape = pathContourShapeNames[_componentIndex - 3];
     }

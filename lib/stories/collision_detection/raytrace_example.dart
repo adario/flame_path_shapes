@@ -3,9 +3,12 @@ import 'dart:math';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
+import 'package:flame/extensions.dart';
 import 'package:flame/game.dart';
 import 'package:flame/geometry.dart';
 import 'package:flame/palette.dart';
+import 'package:flame_path_shapes/commons/path_component.dart';
+import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flutter/material.dart';
 
 class RaytraceExample extends FlameGame
@@ -35,16 +38,27 @@ bounce on will appear.
   final List<Ray2> rays = [];
   final List<RaycastResult<ShapeHitbox>> results = [];
 
-  late Path path;
+  Size get pathSize => Size.square(125 + (50 * random.nextDouble()));
+  Path get path => randomPath(pathSize);
   @override
   Future<void> onLoad() async {
+    final halfCanvas = Size.square(min(canvasSize.x, canvasSize.y) / 2);
     addAll([
       ScreenHitbox(),
-      CircleComponent(
-        radius: min(canvasSize.x, canvasSize.y) / 2,
-        paint: boxPaint,
-        children: [CircleHitbox()],
-      ),
+      if (random.nextDouble() <= 0.5)
+        CircleComponent(
+          radius: min(canvasSize.x, canvasSize.y) / 2,
+          paint: boxPaint,
+          children: [CircleHitbox()],
+        )
+      else
+        PathComponent(
+          path: randomPath(halfCanvas * 2),
+          position: halfCanvas.toVector2(),
+          anchor: .center,
+          paint: boxPaint,
+          filterHitboxes: false,
+        ),
     ]);
   }
 
@@ -60,62 +74,60 @@ bounce on will appear.
     _timePassed = 0;
     if (extraChildren.isEmpty) {
       addAll(
-        extraChildren..addAll(
-          [
-            CircleComponent(
-              position: Vector2(100, 100),
-              radius: 50,
-              paint: boxPaint,
-              children: [CircleHitbox()],
-            ),
-            CircleComponent(
-              position: Vector2(150, 500),
-              radius: 50,
-              paint: boxPaint,
-              anchor: Anchor.center,
-              children: [CircleHitbox()],
-            ),
-            CircleComponent(
-              position: Vector2(150, 500),
-              radius: 150,
-              paint: boxPaint,
-              anchor: Anchor.center,
-              children: [CircleHitbox()],
-            ),
-            RectangleComponent(
-              position: Vector2.all(300),
-              size: Vector2.all(100),
-              paint: boxPaint,
-              children: [RectangleHitbox()],
-            ),
-            RectangleComponent(
-              position: Vector2.all(500),
-              size: Vector2(100, 200),
-              paint: boxPaint,
-              children: [RectangleHitbox()],
-            ),
-            CircleComponent(
-              position: Vector2(650, 275),
-              radius: 50,
-              paint: boxPaint,
-              anchor: Anchor.center,
-              children: [CircleHitbox()],
-            ),
-            RectangleComponent(
-              position: Vector2(550, 200),
-              size: Vector2(200, 150),
-              paint: boxPaint,
-              children: [RectangleHitbox()],
-            ),
-            RectangleComponent(
-              position: Vector2(350, 30),
-              size: Vector2(200, 150),
-              paint: boxPaint,
-              angle: tau / 10,
-              children: [RectangleHitbox()],
-            ),
-          ],
-        ),
+        extraChildren..addAll([
+          CircleComponent(
+            position: Vector2(100, 100),
+            radius: 50,
+            paint: boxPaint,
+            children: [CircleHitbox()],
+          ),
+          CircleComponent(
+            position: Vector2(150, 500),
+            radius: 50,
+            paint: boxPaint,
+            anchor: Anchor.center,
+            children: [CircleHitbox()],
+          ),
+          CircleComponent(
+            position: Vector2(150, 500),
+            radius: 150,
+            paint: boxPaint,
+            anchor: Anchor.center,
+            children: [CircleHitbox()],
+          ),
+          PathComponent(
+            path: path,
+            position: Vector2.all(350),
+            paint: boxPaint,
+            filterHitboxes: false,
+          ),
+          RectangleComponent(
+            position: Vector2.all(500),
+            size: Vector2(100, 200),
+            paint: boxPaint,
+            children: [RectangleHitbox()],
+          ),
+          CircleComponent(
+            position: Vector2(650, 275),
+            radius: 50,
+            paint: boxPaint,
+            anchor: Anchor.center,
+            children: [CircleHitbox()],
+          ),
+          RectangleComponent(
+            position: Vector2(550, 200),
+            size: Vector2(200, 150),
+            paint: boxPaint,
+            children: [RectangleHitbox()],
+          ),
+          RectangleComponent(
+            position: Vector2(350, 30),
+            size: Vector2(200, 150),
+            paint: boxPaint,
+            angle: tau / 10,
+            children: [RectangleHitbox()],
+          ),
+        ]),
       );
     } else {
       removeAll(extraChildren);
@@ -175,11 +187,7 @@ bounce on will appear.
         continue;
       }
       final intersectionPoint = result.intersectionPoint!.toOffset();
-      canvas.drawLine(
-        originOffset,
-        intersectionPoint,
-        paint,
-      );
+      canvas.drawLine(originOffset, intersectionPoint, paint);
       originOffset = intersectionPoint;
     }
   }

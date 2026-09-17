@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 
@@ -5,6 +6,7 @@ import 'package:flame/components.dart';
 import 'package:flame/experimental.dart';
 import 'package:flame/game.dart';
 import 'package:flame/image_composition.dart';
+import 'package:flame/palette.dart';
 import 'package:flame_path_shapes/commons/paths.dart';
 
 class ShapesExample extends FlameGame {
@@ -15,9 +17,11 @@ class ShapesExample extends FlameGame {
   ''';
 
   @override
-  Future<void> onLoad() async {
-    final flameSize = Size(174, 186);
+  FutureOr<void> onLoad() async {
+    await super.onLoad();
+    final flameSize = Size(200, 200);
     final flame = randomPath(flameSize).shift(Offset(300, 300));
+    final contours = flame.contours;
     final shapes = [
       Circle(Vector2(50, 30), 20),
       Circle(Vector2(700, 500), 50),
@@ -35,16 +39,19 @@ class ShapesExample extends FlameGame {
         Vector2(750, 60),
         Vector2(590, 30),
       ]),
-      Polygon.fromPath(flame),
+      for (var index = 0; index < contours.length; ++index)
+        Polygon.fromPath(flame, contour: index),
     ];
-    const colors = [
+    final colors = [
       Color(0xFFFFFF88),
       Color(0xFFff88FF),
       Color(0xFF88FFFF),
       Color(0xFF88FF88),
       Color(0xFFaaaaFF),
       Color(0xFFFF8888),
-      Color(0xFFFFA726),
+      BasicPalette.orange.color,
+      for (var index = 1; index < contours.length; ++index)
+        BasicPalette.orange.color,
     ];
     add(ShapesComponent(shapes, colors));
     add(DotsComponent(shapes, colors));

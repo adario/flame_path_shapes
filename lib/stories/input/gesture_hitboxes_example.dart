@@ -39,7 +39,7 @@ class _GestureHitboxesWorld extends World
         Vector2.random(_rng),
         Vector2.random(_rng)..y *= -1,
       ], parentSize: shapeSize),
-      Shapes.path => PolygonHitbox.contour(
+      Shapes.path => PolygonHitbox.fromPath(
         randomPath(shapeSize.toSize()),
         position: shapeSize * 0.5,
         anchor: .center,

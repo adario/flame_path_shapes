@@ -200,7 +200,7 @@ class CollidablePath extends MyCollidable {
     super.screenHitbox,
   ) {
     final path = randomPath(size.toSize());
-    hitbox = PolygonHitbox.contour(path)..renderShape = true;
+    hitbox = PolygonHitbox.fromPath(path)..renderShape = true;
     add(hitbox!);
   }
 }
@@ -230,14 +230,13 @@ class CollidableCircle extends MyCollidable {
 }
 
 class SnowmanPart extends CircleHitbox {
-  @override
-  final renderShape = true;
   final startColor = Colors.white.withValues(alpha: 0.8);
   final Color hitColor;
 
   SnowmanPart(double radius, Vector2 position, this.hitColor)
     : super(radius: radius, position: position, anchor: Anchor.center) {
     paint.color = startColor;
+    renderShape = true;
   }
 
   @override

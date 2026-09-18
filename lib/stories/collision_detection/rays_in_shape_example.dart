@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flame_path_shapes/commons/cancellable_button_component.dart';
+import 'package:flame_path_shapes/commons/paths.dart';
+import 'package:flame_path_shapes/commons/rounded_rect_component.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -10,14 +13,11 @@ import 'package:flame/game.dart';
 import 'package:flame/geometry.dart';
 import 'package:flame/palette.dart';
 import 'package:flame/text.dart';
-import 'package:flame_path_shapes/commons/cancellable_button_component.dart';
-import 'package:flame_path_shapes/commons/paths.dart';
-import 'package:flame_path_shapes/commons/rounded_rect_component.dart';
+import 'package:flame_test/test_paths.dart';
 import 'package:flutter/material.dart';
 
 const side = 200.0;
 const playArea = Rect.fromLTRB(-side, -side, side, side);
-const fontFamily = 'LEDBoard-7';
 const fontSize = 9.0;
 
 typedef ButtonColors = (Color, Color);
@@ -25,31 +25,23 @@ typedef ButtonColors = (Color, Color);
 class RaysInShapeExample extends FlameGame<RaysInShapeWorld> {
   static const description = '''
 In this example we showcase the raytrace functionality where you can see whether
-the rays are inside the shapes or not. Double-click to change the shape that the rays
-are casted against. The rays originates from small circles, and if the circle is
-inside the shape it will be red, otherwise green. And if the ray doesn't hit any
-shape it will be gray. Click once in all shapes but the circle to toggle
-the ray casting/intersection behavior between the (current) crossings approach
-and the point-containment proposal, which should be used for concave polygons.
+the rays are inside the shapes or not. The rays originate from small circles,
+and if the circle is inside the shape it will be green, otherwise red. And if
+the ray doesn't hit any shape it will be gray. Drag a circle to move its ray and
+drag its line to aim it. The Shape button changes the shape that the rays are
+casted against, which includes concave shapes made from paths, the Rays button
+casts a new set of rays and the Rotate button rotates the shape.
 ''';
 
-  TextRenderer get textRenderer => TextPaint(
-    style: TextStyle(
-      fontSize: fontSize - 1,
-      fontFamily: fontFamily,
-      color: Colors.white,
-    ),
+  final TextRenderer textRenderer = TextPaint(
+    style: const TextStyle(fontSize: fontSize - 1, color: Colors.white),
   );
 
-  TextRenderer get textOffRenderer => TextPaint(
-    style: TextStyle(
-      fontSize: fontSize - 1,
-      fontFamily: fontFamily,
-      color: Colors.white54,
-    ),
+  final TextRenderer textOffRenderer = TextPaint(
+    style: const TextStyle(fontSize: fontSize - 1, color: Colors.white54),
   );
 
-  Vector2 get buttonSize => Vector2(40, 16);
+  final buttonSize = Vector2(40, 16);
 
   late AdvancedButtonComponent _rotateButton;
   late AdvancedButtonComponent _shapeButton;
@@ -289,19 +281,19 @@ class RayCircleComponent extends CircleComponent
     _isDragging = false;
   }
 
-  final _segmentFactor = pi * 10;
-
   @override
   bool containsLocalPoint(Vector2 point) {
     _lineDrag = false;
     final length = radius * 2;
     final taxiDistance = point.x.abs() + point.y.abs();
     var result = taxiDistance <= length || super.containsLocalPoint(point);
-    if (!result) {
-      // Why the enormous factor to pick correctly within the epsilon...?
+    // A segment without a length contains every point.
+    if (!result && _lineSegment.from != _lineSegment.to) {
+      // The epsilon is compared with a cross product, which is the distance
+      // to the line times the length of the segment.
       result = _lineSegment.containsPoint(
         point,
-        epsilon: length * _segmentFactor,
+        epsilon: length * _lineSegment.length,
       );
       _lineDrag = result;
     }
@@ -319,8 +311,11 @@ class RayCircleComponent extends CircleComponent
   void _updateFromDrag(Vector2 drag) {
     final delta = drag - Vector2(radius, radius);
     if (_lineDrag) {
-      final dir = ray.direction + delta.normalized();
-      ray.direction = dir.normalized();
+      // Aim the ray at the pointer, which has to be away from the origin to
+      // give a direction.
+      if (!delta.isZero()) {
+        ray.direction = delta.normalized();
+      }
     } else {
       position += delta;
       ray.origin += delta;
@@ -335,15 +330,13 @@ class RayCircleComponent extends CircleComponent
   bool _isDragging = false;
   bool _isHovering = false;
 
-  Paint get _lightPaint => isDragging
-      ? activeLightStroke
-      : (isHovering ? hoveredLightStroke : lightStroke);
-  Paint get _redPaint => isDragging
-      ? activeRedStroke
-      : (isHovering ? hoveredRedStroke : redStroke);
-  Paint get _greenPaint => isDragging
-      ? activeGreenStroke
-      : (isHovering ? hoveredGreenStroke : greenStroke);
+  Paint get _lightPaint => _paintFrom(lightStrokes);
+  Paint get _redPaint => _paintFrom(redStrokes);
+  Paint get _greenPaint => _paintFrom(greenStrokes);
+
+  Paint _paintFrom(StatePaints paints) {
+    return paints.forState(isDragging: isDragging, isHovering: isHovering);
+  }
 }
 
 class RaysInShapeWorld extends World
@@ -375,7 +368,7 @@ class RaysInShapeWorld extends World
         position: ray.origin.clone(),
         radius: 3,
         anchor: .center,
-        paint: lightStroke,
+        paint: lightStrokes.normal,
       );
       _circles[ray] = circle;
     }
@@ -437,19 +430,13 @@ class RaysInShapeWorld extends World
           ..renderShape = true,
       ],
     ),
-    for (var index = 0; index < numTestPaths; ++index)
+    for (var index = 0; index < TestPaths.count; ++index)
       pathComponent(index, _pathSize, renderHitboxes: true),
   ];
 
-  final _ignoredHitboxes = <PolygonHitbox>[];
-
   late TextComponent _textComponent;
-  TextPaint get _textRenderer => TextPaint(
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: fontSize,
-      fontFamily: fontFamily,
-    ),
+  final _textRenderer = TextPaint(
+    style: const TextStyle(color: Colors.white, fontSize: fontSize),
   );
 
   PositionComponent get current => _components[_componentIndex];
@@ -466,11 +453,9 @@ class RaysInShapeWorld extends World
     return _hovering.contains(circle);
   }
 
-  int get numHovering => _hovering.length;
   bool get hasHovering => _hovering.isNotEmpty;
 
   final _hovering = <RayCircleComponent>{};
-  int? hoveredRay;
   Effect? rotate;
   bool isRotating = false;
 
@@ -619,11 +604,7 @@ class RaysInShapeWorld extends World
 
     _startTimer();
     for (final ray in _rays) {
-      final result = collisionDetection.raycast(
-        ray,
-        ignoreHitboxes: _ignoredHitboxes,
-      );
-      _intersections[ray] = result;
+      _intersections[ray] = collisionDetection.raycast(ray);
     }
     final elapsed = _advanceTimer();
     if (elapsed != null) {
@@ -649,7 +630,7 @@ class RaysInShapeWorld extends World
       case 2:
         shape = 'relative';
       default:
-        shape = pathContourShapeNames[_componentIndex - 3];
+        shape = TestPaths.names[_componentIndex - 3];
     }
     message += '$shape ';
     message += elapsedString(elapsed).padLeft(7);

@@ -1,33 +1,35 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/game.dart';
-import 'package:flame_path_shapes/commons/paths.dart';
+import 'package:flame_test/test_paths.dart';
 
 mixin PathsCreationMixin on FlameGame {
   final random = Random();
 
   var _lastRandom = -1;
   int get nextRandomPath {
-    var index = random.nextIntBetween(0, numTestPaths);
+    var index = random.nextIntBetween(0, TestPaths.count);
     while (index == _lastRandom) {
-      index = random.nextIntBetween(0, numTestPaths);
+      index = random.nextIntBetween(0, TestPaths.count);
     }
     _lastRandom = index;
     return index;
   }
 
+  /// A random position for the center of something with the given
+  /// [dimension], such that it is fully within the game.
   Vector2 randomPosition(Size dimension) {
-    var rnd = Vector2.random();
-    final half = dimension * 0.5;
+    final half = dimension.toVector2() / 2;
     return Vector2(
-          rnd.x * (size.x - dimension.width),
-          rnd.y * (size.y - dimension.height),
+          random.nextDouble() * (size.x - dimension.width),
+          random.nextDouble() * (size.y - dimension.height),
         ) +
-        half.toVector2();
+        half;
   }
 
   void addFixedPaths(Paint paint) {
@@ -74,17 +76,16 @@ mixin PathsCreationMixin on FlameGame {
   }
 
   void addTestPaths(
-    Paint paint, [
+    Paint paint, {
     int numPaths = 5,
     bool renderHitboxes = false,
-  ]) {
-    final pathSize = Size.square(100);
+  }) {
+    const pathSize = Size.square(100);
     for (var index = 0; index < numPaths; ++index) {
-      final pathIndex = nextRandomPath;
       add(
         pathComponent(
-          pathIndex,
-          Size.square(100),
+          nextRandomPath,
+          pathSize,
           position: randomPosition(pathSize),
           paint: paint,
           renderHitboxes: renderHitboxes,

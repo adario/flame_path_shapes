@@ -1,13 +1,13 @@
-import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:collection/collection.dart';
+import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flame/components.dart';
 import 'package:flame/experimental.dart';
+import 'package:flame/extensions.dart' show Aabb2Extension, PathExtension;
 import 'package:flame/game.dart';
-import 'package:flame/image_composition.dart';
 import 'package:flame/palette.dart';
-import 'package:flame_path_shapes/commons/paths.dart';
 
 class ShapesExample extends FlameGame {
   static const description = '''
@@ -17,11 +17,20 @@ class ShapesExample extends FlameGame {
   ''';
 
   @override
-  FutureOr<void> onLoad() async {
+  Future<void> onLoad() async {
     await super.onLoad();
-    final flameSize = Size(200, 200);
-    final flame = randomPath(flameSize).shift(Offset(300, 300));
+    const flameSize = Size(200, 200);
+    final flame = randomPath(flameSize).shift(const Offset(300, 350));
     final contours = flame.contours;
+    // Sorted by size, so that the largest one is drawn first and can be used
+    // to approximate full inclusion.
+    final polygons = [
+      for (var index = 0; index < contours.length; ++index)
+        Polygon.fromPath(flame, contour: index),
+    ]..sortBy((polygon) => (polygon.aabb.max - polygon.aabb.min).length2);
+    final disjoint = _findDisjoint(polygons);
+    final disjointColor = BasicPalette.lightOrange.color;
+    final overlapColor = BasicPalette.yellow.color.withValues(alpha: 0.8);
     final shapes = [
       Circle(Vector2(50, 30), 20),
       Circle(Vector2(700, 500), 50),
@@ -39,23 +48,41 @@ class ShapesExample extends FlameGame {
         Vector2(750, 60),
         Vector2(590, 30),
       ]),
-      for (var index = 0; index < contours.length; ++index)
-        Polygon.fromPath(flame, contour: index),
+      ...polygons,
     ];
     final colors = [
-      Color(0xFFFFFF88),
-      Color(0xFFff88FF),
-      Color(0xFF88FFFF),
-      Color(0xFF88FF88),
-      Color(0xFFaaaaFF),
-      Color(0xFFFF8888),
-      BasicPalette.orange.color,
-      for (var index = 1; index < contours.length; ++index)
-        BasicPalette.orange.color,
+      const Color(0xFFFFFF88),
+      const Color(0xFFff88FF),
+      const Color(0xFF88FFFF),
+      const Color(0xFF88FF88),
+      const Color(0xFFaaaaFF),
+      const Color(0xFFFF8888),
+      for (final isDisjoint in disjoint)
+        if (isDisjoint) disjointColor else overlapColor,
     ];
     add(ShapesComponent(shapes, colors));
     add(DotsComponent(shapes, colors));
     add(FpsTextComponent(position: Vector2(8, size.y - 24), priority: 1));
+  }
+
+  /// Whether each of the [polygons], which have to be sorted by size, is
+  /// outside of the largest one.
+  List<bool> _findDisjoint(List<Polygon> polygons) {
+    if (polygons.length < 2) {
+      return polygons.isEmpty ? [] : [true];
+    }
+    final largest = polygons.last;
+    final area = largest.aabb.toRect();
+
+    return polygons
+        .map((element) {
+          if (element == largest) {
+            return true;
+          }
+          final bounds = element.aabb.toRect();
+          return area.expandToInclude(bounds) != area;
+        })
+        .toList(growable: false);
   }
 }
 
@@ -98,6 +125,7 @@ class DotsComponent extends Component {
   final Random random = Random();
   final List<Vector2> points = [];
   final List<Color> pointColors = [];
+  final Paint _paint = Paint();
   static const pointSize = 3;
 
   @override
@@ -120,12 +148,11 @@ class DotsComponent extends Component {
   @override
   void render(Canvas canvas) {
     const d = pointSize / 2;
-    final paint = Paint();
     for (var i = 0; i < points.length; i++) {
       final x = points[i].x;
       final y = points[i].y;
-      paint.color = pointColors[i];
-      canvas.drawRect(Rect.fromLTRB(x - d, y - d, x + d, y + d), paint);
+      _paint.color = pointColors[i];
+      canvas.drawRect(Rect.fromLTRB(x - d, y - d, x + d, y + d), _paint);
     }
   }
 }

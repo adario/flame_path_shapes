@@ -11,9 +11,11 @@ dependencies:
   flutter:
     sdk: flutter
 
+  collection: ^1.18.0
   flame: ^1.38.2
   flame_forge2d: ^0.20.0
   flame_noise: ^0.3.3+23
+  flame_test: ^2.3.1
   dashbook: ^0.1.18
   meta: ^1.19.0
   web: ^1.1.1
@@ -35,6 +37,11 @@ dependency_overrides:
     git:
       url: https://github.com/adario/flame
       path: packages/flame_forge2d
+      ref: feat/path-shapes
+  flame_test:
+    git:
+      url: https://github.com/adario/flame
+      path: packages/flame_test
       ref: feat/path-shapes
 
 flutter:

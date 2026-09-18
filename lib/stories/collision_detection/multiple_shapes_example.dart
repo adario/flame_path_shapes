@@ -1,12 +1,12 @@
 import 'dart:math';
 
+import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/game.dart';
 import 'package:flame/palette.dart';
-import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flutter/material.dart' hide Image, Draggable;
 
 enum Shapes { circle, rectangle, polygon, path }
@@ -199,8 +199,14 @@ class CollidablePath extends MyCollidable {
     super.velocity,
     super.screenHitbox,
   ) {
+    // The path is centered on the origin, so the hitbox is placed in the
+    // middle of the component.
     final path = randomPath(size.toSize());
-    hitbox = PolygonHitbox.fromPath(path)..renderShape = true;
+    hitbox = PolygonHitbox.fromPath(
+      path,
+      position: size / 2,
+      anchor: Anchor.center,
+    )..renderShape = true;
     add(hitbox!);
   }
 }

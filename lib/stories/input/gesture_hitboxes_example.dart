@@ -1,11 +1,11 @@
 import 'dart:math';
 
+import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/game.dart';
-import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flutter/material.dart';
 
 enum Shapes { circle, rectangle, polygon, path }
@@ -53,8 +53,9 @@ class _GestureHitboxesWorld extends World
     );
   }
 
-  TextPaint get _textRenderer =>
-      TextPaint(style: TextStyle(color: Colors.white, fontSize: 16));
+  final _textRenderer = TextPaint(
+    style: const TextStyle(color: Colors.white, fontSize: 16),
+  );
 
   @override
   Future<void> onLoad() async {

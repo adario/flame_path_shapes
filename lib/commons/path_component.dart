@@ -1,23 +1,27 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:collection/collection.dart';
+import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/geometry.dart';
-import 'package:flame/palette.dart';
 
+/// Renders a [Path] and gives it a hitbox for each of its contours.
+///
+/// The path is moved so that its bounds start at the origin of the component,
+/// which gets the size of those bounds, so that the anchor and the transform
+/// of the component apply to the path like to any other shape.
 class PathComponent extends ShapeComponent
     with CollisionCallbacks, CollisionPassthrough {
   PathComponent({
-    required this.path,
+    required Path path,
     this.addHitboxes = false,
     this.loadHitboxes = true,
-    this.hasHitboxes = true,
     this.renderHitboxes = false,
     this.filterHitboxes = true,
     this.hitboxesPaint,
     super.position,
-    super.size,
     super.scale,
     super.angle,
     super.anchor,
@@ -26,26 +30,28 @@ class PathComponent extends ShapeComponent
     super.key,
     super.paint,
     super.paintLayers,
-  }) {
+  }) : path = path.toOrigin,
+       super(size: path.getBounds().size.toVector2()) {
     if (addHitboxes) {
       _addHitboxes();
     }
   }
 
   final Path path;
-  final bool hasHitboxes;
+
+  /// Whether the hitboxes are added right away, in the constructor.
+  final bool addHitboxes;
+
+  /// Whether the hitboxes are added when the component loads.
+  final bool loadHitboxes;
   final bool renderHitboxes;
   final bool filterHitboxes;
   final Paint? hitboxesPaint;
 
   List<PolygonHitbox> get hitboxes => _hitboxes;
 
-  late bool addHitboxes;
-  late bool loadHitboxes;
-
   var _hitboxesAdded = false;
   late final _hitboxes = _hitboxesFor(path);
-  late final whiteStroke = BasicPalette.white.paint()..style = .stroke;
 
   @override
   FutureOr<void> onLoad() async {
@@ -86,50 +92,33 @@ class PathComponent extends ShapeComponent
     if (hitboxes.length < 2) {
       return hitboxes;
     }
-    // Sort the hitboxes by size in ascending order: we will use the largest
-    // area in order to approximate full inclusion.
-    hitboxes.sort((a, b) => (b.size.length2 - a.size.length2).toInt());
-    final first = hitboxes.first;
-    final area = Rect.fromCenter(
-      center: Offset(first.x, first.y),
-      width: first.width,
-      height: first.height,
-    );
+    // Sort the hitboxes by size: we will use the largest area in order to
+    // approximate full inclusion.
+    hitboxes.sortBy((hitbox) => hitbox.size.length2);
+    final largest = hitboxes.last;
+    final area = largest.toRect();
 
-    // We always keep the first hitbox (the largest one): the others
-    // are discarded if they fit entirely within it.
+    // We always keep the largest hitbox: the others are discarded if they fit
+    // entirely within it.
     if (filterHitboxes) {
       hitboxes.removeWhere((element) {
-        if (element == first) {
+        if (element == largest) {
           return false;
         }
-        final bounds = Rect.fromCenter(
-          center: Offset(element.x, element.y),
-          width: element.width,
-          height: element.height,
-        );
-        return area.expandToInclude(bounds) == area;
+        return area.expandToInclude(element.toRect()) == area;
       });
     }
     return hitboxes;
   }
 
   List<PolygonHitbox> _hitboxesFor(Path path) {
-    final hitboxes = <PolygonHitbox>[];
-    final contours = path.walkContours();
-    for (final contour in contours) {
-      final rectangle = contour.rectangle;
-      hitboxes.add(
-        PolygonHitbox(
-            contour.vertices,
-            anchor: .center,
-            position: rectangle.center.toVector2(),
-          )
+    final count = path.contours.length;
+    return [
+      for (var contour = 0; contour < count; contour++)
+        PolygonHitbox.fromPath(path, contour: contour)
           ..priority = priority + 1
           ..paint = hitboxesPaint ?? whiteStroke
           ..renderShape = renderHitboxes,
-      );
-    }
-    return hitboxes;
+    ];
   }
 }

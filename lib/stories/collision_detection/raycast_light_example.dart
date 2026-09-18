@@ -50,7 +50,7 @@ with with mouse.
       ..strokeWidth = 2.0;
     add(ScreenHitbox());
     addFixedPaths(paint);
-    addTestPaths(paint);
+    await addTestPaths(paint);
   }
 
   @override

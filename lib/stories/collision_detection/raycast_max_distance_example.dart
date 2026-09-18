@@ -32,14 +32,14 @@ This examples showcases how raycast APIs can be used to detect hits within certa
   );
 
   @override
-  void onLoad() {
+  Future<void> onLoad() async {
     camera = CameraComponent.withFixedResolution(
       world: world,
       width: 320,
       height: 180,
     );
 
-    _addMovingShape();
+    await _addMovingShape();
 
     world.add(
       _character = _Character(
@@ -54,15 +54,17 @@ This examples showcases how raycast APIs can be used to detect hits within certa
     _ray = Ray2(origin: _character.absolutePosition, direction: Vector2(1, 0));
   }
 
-  void _addMovingShape() {
+  Future<void> _addMovingShape() async {
     final rnd = Random();
     final size = Vector2(20, 40) * 1.5;
     final path = rnd.nextIntBetween(0, TestPaths.count);
-    final component = pathComponent(
-      path,
-      size.toSize(),
-      paint: BasicPalette.red.paint()..style = .stroke,
-    )..anchor = .center;
+    final component =
+        await svgComponent(
+            path,
+            size.toSize(),
+            paint: BasicPalette.red.paint()..style = .stroke,
+          )
+          ..anchor = .center;
     component.add(
       MoveByEffect(
         Vector2(50, 0),

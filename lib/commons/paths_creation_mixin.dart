@@ -75,15 +75,15 @@ mixin PathsCreationMixin on FlameGame {
     );
   }
 
-  void addTestPaths(
+  Future<void> addTestPaths(
     Paint paint, {
     int numPaths = 5,
     bool renderHitboxes = false,
-  }) {
+  }) async {
     const pathSize = Size.square(100);
     for (var index = 0; index < numPaths; ++index) {
       add(
-        pathComponent(
+        await svgComponent(
           nextRandomPath,
           pathSize,
           position: randomPosition(pathSize),

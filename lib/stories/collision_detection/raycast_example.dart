@@ -37,7 +37,7 @@ around trying not to hit them.
       ..strokeWidth = 3.0;
     add(ScreenHitbox());
     addFixedPaths(paint);
-    addTestPaths(paint);
+    await addTestPaths(paint);
   }
 
   final _velocityModifier = Vector2.zero();

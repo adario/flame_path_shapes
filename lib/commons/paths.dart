@@ -5,6 +5,7 @@ import 'package:flame_path_shapes/commons/path_component.dart';
 import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/palette.dart';
+import 'package:flame_path_shapes/commons/svg_paths.dart';
 import 'package:flame_test/test_paths.dart';
 
 final _rnd = Random();
@@ -80,11 +81,59 @@ Path randomPath(Size size) {
   return TestPaths.byIndex(_rnd.nextIntBetween(0, TestPaths.count), size);
 }
 
+const List<Paint> _emptyLayers = [];
+Future<PathComponent> svgComponent(
+  int index,
+  Size size, {
+  Vector2? position,
+  Paint? paint,
+  List<Paint>? paintLayers = _emptyLayers,
+  Paint? contourPaint,
+  bool? renderHitboxes,
+  Anchor? anchor,
+}) async {
+  final pathIndex = index % TestPaths.count;
+  if (pathIndex == 0) {
+    // No SVG for the round rect.
+    return pathComponent(
+      pathIndex,
+      size,
+      position: position,
+      paint: paint ?? pathStroke,
+      paintLayers: paintLayers,
+      contourPaint: contourPaint,
+      renderHitboxes: renderHitboxes,
+      anchor: anchor,
+    );
+  }
+
+  // Load SVG paths.
+  final svgName = TestPaths.names[pathIndex];
+  final svgPathName = 'assets/svgs/$svgName.svg';
+  final svgPaths = await SvgPaths.fromFile(svgPathName);
+  const svgIndex = 0;
+  final vectorPath = svgPaths.pathAt(svgIndex);
+  final vectorPaints = svgPaths.paintsAt(svgIndex);
+  assert(vectorPath != null && vectorPaints != null, 'Invalid path or paints');
+  return pathComponentWith(
+    vectorPath!.path,
+    size,
+    resize: true,
+    position: position,
+    paint: paint ?? vectorPaints!.paint,
+    paintLayers: paintLayers ?? vectorPaints!.paintLayers,
+    contourPaint: contourPaint,
+    renderHitboxes: renderHitboxes,
+    anchor: anchor,
+  );
+}
+
 PathComponent pathComponent(
   int index,
   Size size, {
   Vector2? position,
   Paint? paint,
+  List<Paint>? paintLayers,
   Paint? contourPaint,
   bool? renderHitboxes,
   Anchor? anchor,
@@ -92,6 +141,32 @@ PathComponent pathComponent(
   // Create a standard test path that fits within our chosen size with its
   // original aspect ratio.
   final path = TestPaths.byIndex(index % TestPaths.count, size);
+  return pathComponentWith(
+    path,
+    size,
+    position: position,
+    paint: paint ?? pathStroke,
+    paintLayers: paintLayers,
+    contourPaint: contourPaint,
+    renderHitboxes: renderHitboxes,
+    anchor: anchor,
+  );
+}
+
+PathComponent pathComponentWith(
+  Path srcPath,
+  Size size, {
+  bool resize = false,
+  Vector2? position,
+  Paint? paint,
+  List<Paint>? paintLayers,
+  Paint? contourPaint,
+  bool? renderHitboxes,
+  Anchor? anchor,
+}) {
+  // Create a standard test path that fits within our chosen size with its
+  // original aspect ratio.
+  final path = resize ? srcPath.resizeTo(size, keepRatio: true) : srcPath;
 
   // Create a component that displays the whole path: we filter all hitboxes
   // that are (approximately) fully enclosed in the largest one.
@@ -101,6 +176,7 @@ PathComponent pathComponent(
     position: position ?? Vector2.zero(),
     anchor: anchor ?? Anchor.center,
     paint: paint ?? pathStroke,
+    paintLayers: paintLayers,
     hitboxesPaint: contourPaint,
     renderHitboxes: renderHitboxes ?? false,
   )..renderShape = true;

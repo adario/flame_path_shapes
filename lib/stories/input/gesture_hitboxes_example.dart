@@ -1,8 +1,6 @@
 import 'dart:math';
 
 import 'package:flame/extensions.dart' as ui;
-import 'package:flame_path_shapes/commons/path_component.dart'
-    show PathComponent;
 import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
@@ -37,15 +35,12 @@ class _GestureHitboxesWorld extends World
     final hitbox = switch (shapeType) {
       Shapes.circle => CircleHitbox(),
       Shapes.rectangle => RectangleHitbox(),
-      Shapes.polygon => PolygonHitbox.relative(
-        [
-          -Vector2.random(_rng),
-          Vector2.random(_rng)..x *= -1,
-          Vector2.random(_rng),
-          Vector2.random(_rng)..y *= -1,
-        ],
-        parentSize: shapeSize,
-      ),
+      Shapes.polygon => PolygonHitbox.relative([
+        -Vector2.random(_rng),
+        Vector2.random(_rng)..x *= -1,
+        Vector2.random(_rng),
+        Vector2.random(_rng)..y *= -1,
+      ], parentSize: shapeSize),
       Shapes.path => PolygonHitbox.fromPath(
         path,
         position: shapeSize * 0.5,

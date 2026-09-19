@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:flame_path_shapes/commons/path_component.dart';
 import 'package:flame_path_shapes/commons/paths.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
@@ -106,12 +105,8 @@ abstract class MyCollidable extends PositionComponent
   final ScreenHitbox screenHitbox;
   ShapeHitbox? hitbox;
 
-  MyCollidable(
-    Vector2 position,
-    Vector2 size,
-    this.velocity,
-    this.screenHitbox,
-  ) : super(position: position, size: size, anchor: Anchor.center) {
+  MyCollidable(Vector2 position, Vector2 size, this.velocity, this.screenHitbox)
+    : super(position: position, size: size, anchor: Anchor.center) {
     dragIndicatorPaint = BasicPalette.white.paint();
   }
 
@@ -181,19 +176,16 @@ class CollidablePolygon extends MyCollidable {
     Vector2 velocity,
     ScreenHitbox screenHitbox,
   ) : super(position, size, velocity, screenHitbox) {
-    hitbox = PolygonHitbox.relative(
-      [
-        Vector2(-1.0, 0.0),
-        Vector2(-0.8, 0.6),
-        Vector2(0.0, 1.0),
-        Vector2(0.6, 0.9),
-        Vector2(1.0, 0.0),
-        Vector2(0.6, -0.8),
-        Vector2(0, -1.0),
-        Vector2(-0.8, -0.8),
-      ],
-      parentSize: size,
-    )..renderShape = true;
+    hitbox = PolygonHitbox.relative([
+      Vector2(-1.0, 0.0),
+      Vector2(-0.8, 0.6),
+      Vector2(0.0, 1.0),
+      Vector2(0.6, 0.9),
+      Vector2(1.0, 0.0),
+      Vector2(0.6, -0.8),
+      Vector2(0, -1.0),
+      Vector2(-0.8, -0.8),
+    ], parentSize: size)..renderShape = true;
     add(hitbox!);
   }
 }

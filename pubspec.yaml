@@ -33,12 +33,12 @@ dependency_overrides:
     git:
       url: https://github.com/adario/flame
       path: packages/flame
-      ref: feat/path-shapes
+      ref: feat/path-component
   flame_forge2d:
     git:
       url: https://github.com/adario/flame
       path: packages/flame_forge2d
-      ref: feat/path-shapes
+      ref: feat/path-component
   flame_test:
     git:
       url: https://github.com/adario/flame

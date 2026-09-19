@@ -399,7 +399,7 @@ class RaysInShapeWorld extends World
       radius: _componentSize.x * 0.6,
       anchor: Anchor.center,
       position: Vector2.zero(),
-      paint: whiteStroke,
+      paint: PathComponent.hitboxStroke,
       children: [CircleHitbox()],
     ),
     RectangleComponent(
@@ -407,7 +407,7 @@ class RaysInShapeWorld extends World
       size: _componentSize,
       anchor: Anchor.center,
       position: Vector2.zero(),
-      paint: whiteStroke,
+      paint: PathComponent.hitboxStroke,
       children: [RectangleHitbox()],
     ),
     PositionComponent(
@@ -425,7 +425,7 @@ class RaysInShapeWorld extends World
             anchor: Anchor.center,
             position: Vector2.zero(),
           )
-          ..paint = whiteStroke
+          ..paint = PathComponent.hitboxStroke
           ..renderShape = true,
       ],
     ),

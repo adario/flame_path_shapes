@@ -107,14 +107,18 @@ Future<PathComponent> svgComponent(
     );
   }
 
-  // Load SVG paths.
+  // Load all paths from the target .svg file.
   final svgName = TestPaths.names[pathIndex];
   final svgPathName = 'assets/svgs/$svgName.svg';
   final svgPaths = await SvgPaths.fromFile(svgPathName);
+
+  // Currently we only use the first path from the .svg.
   const svgIndex = 0;
   final vectorPath = svgPaths.pathAt(svgIndex);
   final vectorPaints = svgPaths.paintsAt(svgIndex);
   assert(vectorPath != null && vectorPaints != null, 'Invalid path or paints');
+
+  // Create PathComponent resizing the path explicitly.
   return pathComponentWith(
     vectorPath!.path,
     size,

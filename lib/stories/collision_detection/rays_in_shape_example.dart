@@ -430,8 +430,6 @@ class RaysInShapeWorld extends World
           ..renderShape = true,
       ],
     ),
-    for (var index = 0; index < TestPaths.count; ++index)
-      pathComponent(index, _pathSize, renderHitboxes: true),
   ];
 
   late TextComponent _textComponent;
@@ -522,9 +520,24 @@ class RaysInShapeWorld extends World
     add(component);
   }
 
+  Future<void> _addComponents() async {
+    final svgs = [
+      for (var index = 0; index < TestPaths.count; ++index)
+        await svgComponent(
+          index,
+          _pathSize,
+          paint: pathStroke,
+          renderHitboxes: true,
+        ),
+    ];
+    _components.addAll(svgs);
+  }
+
   @override
-  FutureOr<void> onLoad() {
+  FutureOr<void> onLoad() async {
     super.onLoad();
+    await _addComponents();
+
     _addCurrent(current);
     add(ScreenHitbox());
     _textComponent = TextComponent(

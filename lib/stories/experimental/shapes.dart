@@ -134,7 +134,10 @@ class DotsComponent extends Component {
   }
 
   void generatePoint() {
-    final point = Vector2(random.nextDouble() * 800, random.nextDouble() * 600);
+    final point = Vector2(
+      random.nextDouble() * 800,
+      random.nextDouble() * 600,
+    );
     points.add(point);
     pointColors.add(const Color(0xff444444));
     for (var i = 0; i < shapes.length; i++) {

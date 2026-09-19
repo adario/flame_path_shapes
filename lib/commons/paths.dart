@@ -168,7 +168,7 @@ PathComponent pathComponentWith(
   bool? renderHitboxes,
   Anchor? anchor,
 }) {
-  // Create a standard test path that fits within our chosen size with its
+  // Adjust the path such that fits within our chosen size with its
   // original aspect ratio.
   final path = resize ? srcPath.resizeTo(size, keepRatio: true) : srcPath;
 

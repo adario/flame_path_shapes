@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/palette.dart';
-import 'package:flame_path_shapes/commons/svg_paths.dart';
+import 'package:flame_svg/flame_svg.dart';
 import 'package:flame_test/test_paths.dart';
 
 final _rnd = Random();

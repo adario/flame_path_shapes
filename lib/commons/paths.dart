@@ -77,7 +77,7 @@ Path randomPath(Size size) {
 }
 
 const List<Paint> _emptyLayers = [];
-Future<PathComponent> svgComponent(
+Future<PositionComponent> svgComponent(
   int index,
   Size size, {
   Vector2? position,
@@ -127,7 +127,7 @@ Future<PathComponent> svgComponent(
   );
 }
 
-PathComponent pathComponent(
+PositionComponent pathComponent(
   int index,
   Size size, {
   Vector2? position,
@@ -152,7 +152,7 @@ PathComponent pathComponent(
   );
 }
 
-PathComponent pathComponentWith(
+PositionComponent pathComponentWith(
   Path srcPath,
   Size size, {
   bool resize = false,

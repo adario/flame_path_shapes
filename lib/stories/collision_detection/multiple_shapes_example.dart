@@ -105,8 +105,12 @@ abstract class MyCollidable extends PositionComponent
   final ScreenHitbox screenHitbox;
   ShapeHitbox? hitbox;
 
-  MyCollidable(Vector2 position, Vector2 size, this.velocity, this.screenHitbox)
-    : super(position: position, size: size, anchor: Anchor.center) {
+  MyCollidable(
+    Vector2 position,
+    Vector2 size,
+    this.velocity,
+    this.screenHitbox,
+  ) : super(position: position, size: size, anchor: Anchor.center) {
     dragIndicatorPaint = BasicPalette.white.paint();
   }
 
@@ -176,76 +180,39 @@ class CollidablePolygon extends MyCollidable {
     Vector2 velocity,
     ScreenHitbox screenHitbox,
   ) : super(position, size, velocity, screenHitbox) {
-    hitbox = PolygonHitbox.relative([
-      Vector2(-1.0, 0.0),
-      Vector2(-0.8, 0.6),
-      Vector2(0.0, 1.0),
-      Vector2(0.6, 0.9),
-      Vector2(1.0, 0.0),
-      Vector2(0.6, -0.8),
-      Vector2(0, -1.0),
-      Vector2(-0.8, -0.8),
-    ], parentSize: size)..renderShape = true;
+    hitbox = PolygonHitbox.relative(
+      [
+        Vector2(-1.0, 0.0),
+        Vector2(-0.8, 0.6),
+        Vector2(0.0, 1.0),
+        Vector2(0.6, 0.9),
+        Vector2(1.0, 0.0),
+        Vector2(0.6, -0.8),
+        Vector2(0, -1.0),
+        Vector2(-0.8, -0.8),
+      ],
+      parentSize: size,
+    )..renderShape = true;
     add(hitbox!);
   }
 }
 
-class CollidablePath extends MyCollidable with CollisionPassthrough {
+class CollidablePath extends MyCollidable {
   CollidablePath(
     super.position,
     super.size,
     super.velocity,
     super.screenHitbox,
   ) {
-    // The path is centered on the origin, so the hitbox is placed in the
-    // middle of the component.
-    final path = randomPath(size.toSize());
-    _pathPaint = Paint.from(pathStroke)..color = defaultColor;
-    _component = pathComponentWith(
-      path,
-      size.toSize(),
-      paint: _pathPaint,
-      anchor: .center,
-    );
-    add(_component);
+    // The path keeps its aspect ratio within the size, so the hitbox is
+    // centered in the component.
+    hitbox = PathHitbox(
+      path: randomPath(size.toSize()),
+      position: size / 2,
+      anchor: Anchor.center,
+    )..renderShape = true;
+    add(hitbox!);
   }
-
-  @override
-  bool containsLocalPoint(Vector2 point) {
-    var result = super.containsLocalPoint(point);
-    if (!result) {
-      final area = Rect.fromCenter(center: .zero, width: width, height: height);
-      result = area.containsPoint(point);
-    }
-    return result;
-  }
-
-  @override
-  void render(Canvas canvas) {
-    if (isDragged) {
-      canvas.drawCircle(.zero, 5, dragIndicatorPaint);
-    }
-  }
-
-  @override
-  void onCollisionStart(
-    List<Vector2> intersectionPoints,
-    PositionComponent other,
-  ) {
-    super.onCollisionStart(intersectionPoints, other);
-    _pathPaint.color = other is ScreenHitbox ? screenColor : collisionColor;
-  }
-
-  @override
-  void onCollisionEnd(PositionComponent other) {
-    super.onCollisionEnd(other);
-    if (!isColliding) {
-      _pathPaint.color = defaultColor;
-    }
-  }
-
-  late final PositionComponent _component;
-  late final Paint _pathPaint;
 }
 
 class CollidableRectangle extends MyCollidable {

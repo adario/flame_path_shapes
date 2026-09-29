@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/palette.dart';
@@ -10,6 +11,10 @@ import 'package:flame_test/test_paths.dart';
 final _rnd = Random();
 
 const shapePriority = 1;
+
+final whiteStroke = Paint()
+  ..color = const Color(0xffffffff)
+  ..style = PaintingStyle.stroke;
 
 final pathStroke = Paint()
   ..color = BasicPalette.blue.color
@@ -22,8 +27,8 @@ final pathStroke = Paint()
 ///
 /// Paints are expensive to create, so the three of them are created once
 /// and picked by state with [forState] whenever they are needed.
-class StatePaints {
-  StatePaints({
+class InteractiveStatePaints {
+  InteractiveStatePaints({
     required Color normal,
     required Color hovered,
     required Color active,
@@ -54,19 +59,19 @@ class StatePaints {
   }
 }
 
-final lightStrokes = StatePaints(
+final lightStrokes = InteractiveStatePaints(
   normal: const Color(0x90ffffff),
   hovered: const Color(0xd0ffffff),
   active: const Color(0xe0ffffff),
 );
 
-final greenStrokes = StatePaints(
+final greenStrokes = InteractiveStatePaints(
   normal: const Color(0xd000ff00),
   hovered: const Color(0xef00ff00),
   active: const Color(0xff00ff00),
 );
 
-final redStrokes = StatePaints(
+final redStrokes = InteractiveStatePaints(
   normal: const Color(0xd0ff0000),
   hovered: const Color(0xe0ff0000),
   active: const Color(0xffff0000),
@@ -135,6 +140,7 @@ PositionComponent pathComponent(
   List<Paint>? paintLayers,
   Paint? contourPaint,
   bool? renderHitboxes,
+  bool? filter,
   Anchor? anchor,
 }) {
   // Create a standard test path that fits within our chosen size with its
@@ -148,6 +154,7 @@ PositionComponent pathComponent(
     paintLayers: paintLayers,
     contourPaint: contourPaint,
     renderHitboxes: renderHitboxes,
+    filter: filter,
     anchor: anchor,
   );
 }
@@ -161,14 +168,22 @@ PositionComponent pathComponentWith(
   List<Paint>? paintLayers,
   Paint? contourPaint,
   bool? renderHitboxes,
+  bool? filter,
   Anchor? anchor,
 }) {
   // Adjust the path such that fits within our chosen size with its
   // original aspect ratio.
   final path = resize ? srcPath.resizeTo(size, keepRatio: true) : srcPath;
 
-  // Create a component that displays the whole path: we filter all hitboxes
-  // that are (approximately) fully enclosed in the largest one.
+  // The hitbox follows the same path as the component, so that the component
+  // collides and reacts to gestures as a whole. By default, the polygons that
+  // lie inside of the largest one are left out of both.
+  final hitbox = PathHitbox(path: path, filter: filter ?? true);
+  if (renderHitboxes ?? false) {
+    hitbox
+      ..renderShape = true
+      ..paint = contourPaint ?? whiteStroke;
+  }
   return PathComponent(
     path: path,
     priority: shapePriority,
@@ -176,7 +191,7 @@ PositionComponent pathComponentWith(
     anchor: anchor ?? Anchor.center,
     paint: paint ?? pathStroke,
     paintLayers: paintLayers,
-    hitboxesPaint: contourPaint,
-    renderHitboxes: renderHitboxes ?? false,
-  )..renderShape = true;
+    filter: filter ?? true,
+    children: [hitbox],
+  );
 }

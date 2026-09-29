@@ -43,7 +43,10 @@ class DoubleTappableEmber extends Ember with DoubleTapCallbacks {
   bool debugMode = true;
 
   DoubleTappableEmber({Vector2? position})
-    : super(position: position ?? Vector2.all(100), size: Vector2.all(100));
+    : super(
+        position: position ?? Vector2.all(100),
+        size: Vector2.all(100),
+      );
 
   @override
   void onDoubleTapUp(DoubleTapEvent event) {

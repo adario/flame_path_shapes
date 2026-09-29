@@ -85,14 +85,22 @@ class _GestureHitboxesWorld extends World
 
 class MyPathComponent extends PathComponent
     with TapCallbacks, HoverCallbacks, GestureHitboxes {
-  late final ui.Color baseColor;
+  late final Color baseColor;
 
   MyPathComponent({
     required super.path,
     super.position,
     super.scale,
     super.angle,
-  }) : super(anchor: .center, renderHitboxes: true);
+  }) : super(anchor: .center) {
+    // The hitbox follows the same path, and it is rendered so that you can
+    // see the polygons that receive the gestures.
+    add(
+      PathHitbox(path: path)
+        ..renderShape = true
+        ..paint = whiteStroke,
+    );
+  }
 
   @override
   Future<void> onLoad() async {
@@ -120,7 +128,7 @@ class MyPathComponent extends PathComponent
 class MyShapeComponent extends PositionComponent
     with TapCallbacks, HoverCallbacks, GestureHitboxes {
   final ShapeHitbox hitbox;
-  late final ui.Color baseColor;
+  late final Color baseColor;
 
   MyShapeComponent({
     required this.hitbox,

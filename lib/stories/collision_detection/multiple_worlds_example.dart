@@ -69,7 +69,10 @@ class CollidableEmber extends Ember with CollisionCallbacks {
     add(
       ColorEffect(
         index < 2 ? Colors.red : Colors.green,
-        EffectController(duration: 0.2, alternate: true),
+        EffectController(
+          duration: 0.2,
+          alternate: true,
+        ),
         opacityTo: 0.9,
       ),
     );

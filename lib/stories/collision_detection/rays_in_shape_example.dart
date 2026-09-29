@@ -77,18 +77,13 @@ casts a new set of rays and the Rotate button rotates the shape.
 
   ButtonColors _getColorsFor(Color color) {
     final disabledColor = color.withValues(alpha: 0.5);
-    Color downColor;
-    if (color == BasicPalette.orange.color) {
-      downColor = BasicPalette.lightOrange.color;
-    } else if (color == BasicPalette.blue.color) {
-      downColor = BasicPalette.lightBlue.color;
-    } else if (color == BasicPalette.pink.color) {
-      downColor = BasicPalette.lightPink.color;
-    } else if (color == BasicPalette.purple.color) {
-      downColor = BasicPalette.magenta.color;
-    } else {
-      downColor = color;
-    }
+    final colors = <Color, Color>{
+      BasicPalette.orange.color: BasicPalette.lightOrange.color,
+      BasicPalette.blue.color: BasicPalette.lightBlue.color,
+      BasicPalette.pink.color: BasicPalette.lightPink.color,
+      BasicPalette.purple.color: BasicPalette.magenta.color,
+    };
+    final downColor = colors[color] ?? color;
     return (downColor, disabledColor);
   }
 
@@ -339,7 +334,7 @@ class RayCircleComponent extends CircleComponent
   Paint get _redPaint => _paintFrom(redStrokes);
   Paint get _greenPaint => _paintFrom(greenStrokes);
 
-  Paint _paintFrom(StatePaints paints) {
+  Paint _paintFrom(InteractiveStatePaints paints) {
     return paints.forState(isDragging: isDragging, isHovering: isHovering);
   }
 }
@@ -405,7 +400,7 @@ class RaysInShapeWorld extends World
       radius: _componentSize.x * 0.6,
       anchor: Anchor.center,
       position: Vector2.zero(),
-      paint: PathComponent.hitboxStroke,
+      paint: whiteStroke,
       children: [CircleHitbox()],
     ),
     RectangleComponent(
@@ -413,7 +408,7 @@ class RaysInShapeWorld extends World
       size: _componentSize,
       anchor: Anchor.center,
       position: Vector2.zero(),
-      paint: PathComponent.hitboxStroke,
+      paint: whiteStroke,
       children: [RectangleHitbox()],
     ),
     PositionComponent(
@@ -431,7 +426,7 @@ class RaysInShapeWorld extends World
             anchor: Anchor.center,
             position: Vector2.zero(),
           )
-          ..paint = PathComponent.hitboxStroke
+          ..paint = whiteStroke
           ..renderShape = true,
       ],
     ),

@@ -34,22 +34,22 @@ dependency_overrides:
     git:
       url: https://github.com/adario/flame
       path: packages/flame
-      ref: feat/svg-paths
+      ref: feat/path-svgs
   flame_forge2d:
     git:
       url: https://github.com/adario/flame
       path: packages/flame_forge2d
-      ref: feat/svg-paths
+      ref: feat/path-svgs
   flame_test:
     git:
       url: https://github.com/adario/flame
       path: packages/flame_test
-      ref: feat/svg-paths
+      ref: feat/path-svgs
   flame_svg:
     git:
       url: https://github.com/adario/flame
       path: packages/flame_svg
-      ref: feat/svg-paths
+      ref: feat/path-svgs
 
 flutter:
   uses-material-design: true

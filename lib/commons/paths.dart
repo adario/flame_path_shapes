@@ -115,7 +115,7 @@ Future<PositionComponent> svgComponent(
   // Currently we only use the first path from the .svg.
   const svgIndex = 0;
   final vectorPath = svgPaths.pathAt(svgIndex);
-  final vectorPaints = svgPaths.paintsAt(svgIndex);
+  final vectorPaints = svgPaths.paintAt(svgIndex);
   assert(vectorPath != null && vectorPaints != null, 'Invalid path or paints');
 
   // Create PathComponent resizing the path explicitly.

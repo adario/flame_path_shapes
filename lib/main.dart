@@ -2,7 +2,7 @@ import 'package:dashbook/dashbook.dart';
 import 'package:flame_path_shapes/stories/collision_detection/collision_detection.dart';
 import 'package:flame_path_shapes/stories/experimental/experimental.dart';
 import 'package:flame_path_shapes/stories/input/input.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   runAsDashbook();

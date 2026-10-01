@@ -90,12 +90,13 @@ Future<PositionComponent> svgComponent(
   List<Paint>? paintLayers = _emptyLayers,
   Paint? contourPaint,
   bool? renderHitboxes,
+  bool? filter,
   Anchor? anchor,
 }) async {
   final pathIndex = index % TestPaths.count;
   if (pathIndex == 0) {
     // No SVG for the round rect.
-    return pathComponent(
+    return _pathComponent(
       pathIndex,
       size,
       position: position,
@@ -103,39 +104,24 @@ Future<PositionComponent> svgComponent(
       paintLayers: paintLayers,
       contourPaint: contourPaint,
       renderHitboxes: renderHitboxes,
+      filter: filter,
       anchor: anchor,
     );
   }
 
   // Load all paths from the target .svg file.
   final svgName = TestPaths.names[pathIndex];
-  final svgPathName = 'assets/svgs/$svgName.svg';
-  final svgPaths = await SvgPaths.fromFile(svgPathName);
-
-  // Combine all the paths from the .svg into one, so that they are resized
-  // together and keep their relative positions. The first paint is used.
-  assert(svgPaths.length > 0, 'No paths in $svgPathName');
-  final vectorPaints = svgPaths.paintAt(0)!;
-  final combined = Path();
-  for (var i = 0; i < svgPaths.length; ++i) {
-    combined.addPath(svgPaths.pathAt(i)!.path, Offset.zero);
-  }
-
-  // Create PathComponent resizing the path explicitly.
-  return pathComponentWith(
-    combined,
-    size,
-    resize: true,
+  return await SvgPathsComponent.load(
+    svgName,
     position: position,
-    paint: paint ?? vectorPaints.paint,
-    paintLayers: paintLayers ?? vectorPaints.paintLayers,
-    contourPaint: contourPaint,
+    size: size.toVector2(),
+    anchor: anchor ?? .center,
     renderHitboxes: renderHitboxes,
-    anchor: anchor,
+    filter: filter,
   );
 }
 
-PositionComponent pathComponent(
+PositionComponent _pathComponent(
   int index,
   Size size, {
   Vector2? position,
@@ -149,7 +135,7 @@ PositionComponent pathComponent(
   // Create a standard test path that fits within our chosen size with its
   // original aspect ratio.
   final path = TestPaths.byIndex(index % TestPaths.count, size);
-  return pathComponentWith(
+  return _pathComponentWith(
     path,
     size,
     position: position,
@@ -162,7 +148,7 @@ PositionComponent pathComponent(
   );
 }
 
-PositionComponent pathComponentWith(
+PositionComponent _pathComponentWith(
   Path srcPath,
   Size size, {
   bool resize = false,

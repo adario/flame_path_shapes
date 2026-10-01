@@ -33,17 +33,11 @@ casts a new set of rays and the Rotate button rotates the shape.
 ''';
 
   final TextRenderer textRenderer = TextPaint(
-    style: const TextStyle(
-      fontSize: fontSize - 1,
-      color: Colors.white,
-    ),
+    style: const TextStyle(fontSize: fontSize - 1, color: Colors.white),
   );
 
   final TextRenderer textOffRenderer = TextPaint(
-    style: const TextStyle(
-      fontSize: fontSize - 1,
-      color: Colors.white54,
-    ),
+    style: const TextStyle(fontSize: fontSize - 1, color: Colors.white54),
   );
 
   final buttonSize = Vector2(40, 16);
@@ -369,6 +363,7 @@ class RaysInShapeWorld extends World
         radius: 3,
         anchor: .center,
         paint: lightStrokes.normal,
+        priority: shapePriority * 2,
       );
       _circles[ray] = circle;
     }
@@ -434,10 +429,7 @@ class RaysInShapeWorld extends World
 
   late TextComponent _textComponent;
   final _textRenderer = TextPaint(
-    style: const TextStyle(
-      color: Colors.white,
-      fontSize: fontSize,
-    ),
+    style: const TextStyle(color: Colors.white, fontSize: fontSize),
   );
 
   PositionComponent get current => _components[_componentIndex];

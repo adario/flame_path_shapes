@@ -112,20 +112,23 @@ Future<PositionComponent> svgComponent(
   final svgPathName = 'assets/svgs/$svgName.svg';
   final svgPaths = await SvgPaths.fromFile(svgPathName);
 
-  // Currently we only use the first path from the .svg.
-  const svgIndex = 0;
-  final vectorPath = svgPaths.pathAt(svgIndex);
-  final vectorPaints = svgPaths.paintAt(svgIndex);
-  assert(vectorPath != null && vectorPaints != null, 'Invalid path or paints');
+  // Combine all the paths from the .svg into one, so that they are resized
+  // together and keep their relative positions. The first paint is used.
+  assert(svgPaths.length > 0, 'No paths in $svgPathName');
+  final vectorPaints = svgPaths.paintAt(0)!;
+  final combined = Path();
+  for (var i = 0; i < svgPaths.length; ++i) {
+    combined.addPath(svgPaths.pathAt(i)!.path, Offset.zero);
+  }
 
   // Create PathComponent resizing the path explicitly.
   return pathComponentWith(
-    vectorPath!.path,
+    combined,
     size,
     resize: true,
     position: position,
-    paint: paint ?? vectorPaints!.paint,
-    paintLayers: paintLayers ?? vectorPaints!.paintLayers,
+    paint: paint ?? vectorPaints.paint,
+    paintLayers: paintLayers ?? vectorPaints.paintLayers,
     contourPaint: contourPaint,
     renderHitboxes: renderHitboxes,
     anchor: anchor,

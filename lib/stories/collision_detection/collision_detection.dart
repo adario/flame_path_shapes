@@ -1,3 +1,4 @@
+import 'package:flame_path_shapes/commons/button_knob.dart';
 import 'package:flame_path_shapes/commons/commons.dart';
 import 'package:flame_path_shapes/commons/example_use_case.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/bouncing_ball_example.dart';
@@ -86,7 +87,28 @@ WidgetbookComponent collisionDetectionStories() {
       ),
       ExampleUseCase(
         name: 'Ray inside/outside shapes',
-        builder: (_) => GameWidget(game: RaysInShapeExample()),
+        builder: (context) {
+          final shapes = RaysInShapeWorld.shapeNames;
+          return RaysInShapeStory(
+            rotate: context.knobs.boolean(label: 'Rotate'),
+            shape: context.knobs.object.dropdown(
+              label: 'Shape',
+              initialOption: 0,
+              options: List.generate(shapes.length, (index) => index),
+              labelBuilder: (index) => shapes[index],
+            ),
+            rays: context.knobs.int.slider(
+              label: 'Quantity',
+              initialValue: RaysInShapeWorld.defaultRays,
+              min: RaysInShapeWorld.minRays,
+              max: RaysInShapeWorld.maxRays,
+              divisions:
+                  (RaysInShapeWorld.maxRays - RaysInShapeWorld.minRays) ~/
+                  RaysInShapeWorld.raysStep,
+            ),
+            changes: context.knobs.button(label: 'Rays', text: 'Change'),
+          );
+        },
         codeLink: baseLink('collision_detection/rays_in_shape_example.dart'),
         info: RaysInShapeExample.description,
       ),

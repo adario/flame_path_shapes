@@ -14,12 +14,121 @@ import 'package:flame/palette.dart';
 import 'package:flame/text.dart';
 import 'package:flame_test/test_paths.dart';
 import 'package:flutter/material.dart';
+import 'package:widgetbook/widgetbook.dart';
 
 const side = 200.0;
 const playArea = Rect.fromLTRB(-side, -side, side, side);
 const fontSize = 9.0;
 
+/// The width below which Widgetbook switches to its mobile layout, where the
+/// knobs are only reachable through a modal sheet (see its `ResponsiveLayout`).
+const widgetbookMobileWidth = 840.0;
+
 typedef ButtonColors = (Color, Color);
+
+/// Hosts a single [RaysInShapeExample] and applies the knob values to it, so
+/// that changing a knob doesn't restart the game.
+///
+/// When there isn't enough room for the knobs panel, the game shows its own
+/// buttons as well, whose changes are written back to the knobs.
+class RaysInShapeStory extends StatefulWidget {
+  const RaysInShapeStory({
+    required this.rotate,
+    required this.shape,
+    required this.rays,
+    required this.changes,
+    super.key,
+  });
+
+  final bool rotate;
+  final int shape;
+  final int rays;
+
+  /// The number of times that a new set of rays has been requested.
+  final int changes;
+
+  @override
+  State<RaysInShapeStory> createState() => _RaysInShapeStoryState();
+}
+
+class _RaysInShapeStoryState extends State<RaysInShapeStory>
+    with WidgetsBindingObserver {
+  late final _game = RaysInShapeExample(
+    rotate: widget.rotate,
+    shape: widget.shape,
+    rays: widget.rays,
+    onButtonChange: _updateKnobs,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// The window is measured through [View], which doesn't rebuild this widget
+  /// when it's resized (or the device is rotated), so that's done here.
+  @override
+  void didChangeMetrics() {
+    setState(() {});
+  }
+
+  @override
+  void didUpdateWidget(RaysInShapeStory oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final world = _game.world;
+    if (widget.rotate != oldWidget.rotate) {
+      world.setRotate(widget.rotate);
+    }
+    if (widget.shape != oldWidget.shape) {
+      world.setShape(widget.shape);
+    }
+    if (widget.rays != oldWidget.rays) {
+      world.setRayCount(widget.rays);
+    }
+    if (widget.changes != oldWidget.changes) {
+      world.changeRays();
+    }
+  }
+
+  /// Writes the values changed by the buttons back to the knobs, which in turn
+  /// rebuild this widget with the values that the game already has.
+  void _updateKnobs() {
+    if (!mounted) {
+      return;
+    }
+    final world = _game.world;
+    WidgetbookState.of(context)
+      ..updateQueryField(
+        group: 'knobs',
+        field: 'Rotate',
+        value: world.isRotating.toString(),
+      )
+      ..updateQueryField(
+        group: 'knobs',
+        field: 'Shape',
+        value: RaysInShapeWorld.shapeNames[world.shapeIndex],
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The MediaQuery of a use case has the size of the workbench, between the
+    // side panels, whereas Widgetbook picks its layout by the window width.
+    final view = View.of(context);
+    final width = view.physicalSize.width / view.devicePixelRatio;
+    _game.showButtons =
+        WidgetbookState.of(context).panels == null &&
+        width < widgetbookMobileWidth;
+    return GameWidget(game: _game);
+  }
+}
 
 class RaysInShapeExample extends FlameGame<RaysInShapeWorld> {
   static const description = '''
@@ -27,10 +136,28 @@ In this example we showcase the raytrace functionality where you can see whether
 the rays are inside the shapes or not. The rays originate from small circles,
 and if the circle is inside the shape it will be green, otherwise red. And if
 the ray doesn't hit any shape it will be gray. Drag a circle to move its ray and
-drag its line to aim it. The Shape button changes the shape that the rays are
-casted against, which includes concave shapes made from paths, the Rays button
-casts a new set of rays and the Rotate button rotates the shape.
+drag its line to aim it. In the knobs panel, Shape changes the shape that the
+rays are casted against, which includes concave shapes made from paths, Rotate
+rotates the shape (except the circle), Quantity sets the number of rays and
+Change casts a new set of rays. On narrow screens, the Rotate, Shape and Rays
+buttons in the game do the same as the Rotate, Shape and Change knobs.
 ''';
+
+  RaysInShapeExample({
+    bool rotate = false,
+    int shape = 0,
+    int rays = RaysInShapeWorld.defaultRays,
+    this.onButtonChange,
+  }) : super(
+         world: RaysInShapeWorld(rotate: rotate, shape: shape, rays: rays),
+         camera: CameraComponent.withFixedResolution(
+           width: playArea.width,
+           height: playArea.height,
+         ),
+       );
+
+  /// Called after the Rotate or Shape button has changed the world.
+  final VoidCallback? onButtonChange;
 
   final TextRenderer textRenderer = TextPaint(
     style: const TextStyle(fontSize: fontSize - 1, color: Colors.white),
@@ -45,15 +172,18 @@ casts a new set of rays and the Rotate button rotates the shape.
   late AdvancedButtonComponent _rotateButton;
   late AdvancedButtonComponent _shapeButton;
   late AdvancedButtonComponent _raysButton;
+  var _hasButtons = false;
 
-  RaysInShapeExample()
-    : super(
-        world: RaysInShapeWorld(),
-        camera: CameraComponent.withFixedResolution(
-          width: playArea.width,
-          height: playArea.height,
-        ),
-      );
+  /// Whether the buttons are shown, which can be set before loading.
+  bool get showButtons => _showButtons;
+  bool _showButtons = false;
+  set showButtons(bool value) {
+    if (value == _showButtons) {
+      return;
+    }
+    _showButtons = value;
+    _updateButtons();
+  }
 
   @override
   FutureOr<void> onLoad() async {
@@ -62,8 +192,31 @@ casts a new set of rays and the Rotate button rotates the shape.
     _rotateButton = _createRotateButton();
     _shapeButton = _createShapeButton();
     _raysButton = _createRaysButton();
-    _rotateButton.isDisabled = isCircle;
-    camera.viewport.addAll([_rotateButton, _raysButton, _shapeButton]);
+    _hasButtons = true;
+    _updateButtons();
+  }
+
+  void _updateButtons() {
+    if (!_hasButtons) {
+      return;
+    }
+    final buttons = [_rotateButton, _raysButton, _shapeButton];
+    if (_showButtons) {
+      camera.viewport.addAll(buttons);
+    } else {
+      for (final button in buttons) {
+        button.removeFromParent();
+      }
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    // The shape can also be changed by the knobs.
+    if (_hasButtons && _rotateButton.isDisabled != isCircle) {
+      _rotateButton.isDisabled = isCircle;
+    }
   }
 
   Vector2 get halfSize => size * 0.5;
@@ -112,7 +265,7 @@ casts a new set of rays and the Rotate button rotates the shape.
       2,
       .topLeft,
       BasicPalette.orange.color,
-      () => world.toggleRotate(),
+      _toggleRotate,
     );
   }
 
@@ -136,9 +289,15 @@ casts a new set of rays and the Rotate button rotates the shape.
     );
   }
 
+  void _toggleRotate() {
+    world.setRotate(!world.isRotating);
+    onButtonChange?.call();
+  }
+
   void _changeShape() {
-    world.changeShape();
-    _rotateButton.isDisabled = isCircle;
+    final shapes = RaysInShapeWorld.shapeNames.length;
+    world.setShape((world.shapeIndex + 1) % shapes);
+    onButtonChange?.call();
   }
 }
 
@@ -335,12 +494,37 @@ class RayCircleComponent extends CircleComponent
 
 class RaysInShapeWorld extends World
     with HasGameRef<RaysInShapeExample>, HasCollisionDetection {
-  final _rng = Random();
-  List<Ray2> _rays = [];
-  final Map<Ray2, RayCircleComponent> _circles = {};
-  Iterable<RayCircleComponent> get circleComponents => _circles.values;
+  RaysInShapeWorld({bool rotate = false, int shape = 0, int rays = defaultRays})
+    : isRotating = rotate,
+      _componentIndex = shape,
+      _count = rays;
 
-  int get _numRays => 200;
+  static const defaultRays = 200;
+  static const minRays = 10;
+  static const maxRays = 500;
+  static const raysStep = 10;
+
+  /// The names of the shapes, in the order of their indices.
+  static final shapeNames = List<String>.unmodifiable([
+    'Circle',
+    'Rectangle',
+    'Polygon',
+    ...TestPaths.names,
+  ]);
+
+  final _rng = Random();
+
+  /// Every ray of the current set, of which only the first [_count] are cast.
+  ///
+  /// Lowering the number of rays leaves the cache as it is, so that raising it
+  /// again brings back the same rays (moved and aimed as they were left).
+  final List<Ray2> _cache = [];
+  final Map<Ray2, RayCircleComponent> _circles = {};
+  int _count;
+
+  Iterable<Ray2> get _rays => _cache.take(_count);
+  Iterable<RayCircleComponent> get circleComponents =>
+      _rays.map((ray) => _circles[ray]!);
 
   List<Ray2> randomRays(int count) => List<Ray2>.generate(
     count,
@@ -352,12 +536,15 @@ class RaysInShapeWorld extends World
     ),
   );
 
-  void _createCircles() {
-    _hovering.clear();
-    removeAll(circleComponents);
-    _circles.clear();
-    for (final ray in _rays) {
-      final circle = RayCircleComponent(
+  /// Adds new random rays to the cache until it has at least [_count] rays.
+  void _fillCache() {
+    final missing = _count - _cache.length;
+    if (missing <= 0) {
+      return;
+    }
+    for (final ray in randomRays(missing)) {
+      _cache.add(ray);
+      _circles[ray] = RayCircleComponent(
         ray,
         position: ray.origin.clone(),
         radius: 3,
@@ -365,12 +552,21 @@ class RaysInShapeWorld extends World
         paint: lightStrokes.normal,
         priority: shapePriority * 2,
       );
-      _circles[ray] = circle;
     }
-    addAll(circleComponents);
   }
 
-  int _componentIndex = 0;
+  void _removeCircles(Iterable<RayCircleComponent> circles) {
+    for (final circle in circles) {
+      _hovering.remove(circle);
+      circle.removeFromParent();
+    }
+  }
+
+  int _componentIndex;
+
+  /// The index of the current shape in [shapeNames].
+  int get shapeIndex => _componentIndex;
+
   static final _componentSize = Vector2(
     playArea.width * 0.5,
     playArea.height * 0.5,
@@ -450,7 +646,13 @@ class RaysInShapeWorld extends World
 
   final _hovering = <RayCircleComponent>{};
   Effect? rotate;
-  bool isRotating = false;
+
+  /// Whether the shapes rotate, which doesn't apply to the circle.
+  bool isRotating;
+
+  /// Whether [onLoad] has added the shapes and rays, before which the setters
+  /// only record the values that it will use.
+  var _isReady = false;
 
   bool get isCircle => current is CircleComponent;
 
@@ -462,12 +664,14 @@ class RaysInShapeWorld extends World
     _resetTotalTimer();
   }
 
-  void toggleRotate() {
-    if (_componentIndex == 0) {
-      // Not available on the circle.
+  void setRotate(bool value) {
+    if (value == isRotating) {
       return;
     }
-    isRotating = !isRotating;
+    isRotating = value;
+    if (!_isReady) {
+      return;
+    }
     if (isRotating) {
       _addRotate(current);
     } else {
@@ -476,10 +680,17 @@ class RaysInShapeWorld extends World
     _forceUpdate();
   }
 
-  void changeShape() {
+  void setShape(int index) {
+    if (index == _componentIndex) {
+      return;
+    }
+    if (!_isReady) {
+      _componentIndex = index;
+      return;
+    }
     final angle = isRotating && !isCircle ? current.angle : null;
     remove(current);
-    _componentIndex = (_componentIndex + 1) % _components.length;
+    _componentIndex = index;
     _addCurrent(current);
     if (isRotating && angle != null) {
       current.angle = angle;
@@ -487,9 +698,33 @@ class RaysInShapeWorld extends World
     _forceUpdate();
   }
 
+  void setRayCount(int count) {
+    if (count == _count) {
+      return;
+    }
+    final previous = _count;
+    _count = count;
+    if (!_isReady) {
+      return;
+    }
+    if (count > previous) {
+      _fillCache();
+      addAll(_cache.sublist(previous, count).map((ray) => _circles[ray]!));
+    } else {
+      _removeCircles(
+        _cache.sublist(count, previous).map((ray) => _circles[ray]!),
+      );
+    }
+    _forceUpdate();
+  }
+
+  /// Replaces the cache with a new set of rays.
   void changeRays() {
-    _rays = randomRays(_numRays);
-    _createCircles();
+    _removeCircles(circleComponents);
+    _cache.clear();
+    _circles.clear();
+    _fillCache();
+    addAll(circleComponents);
     _forceUpdate();
   }
 
@@ -536,7 +771,7 @@ class RaysInShapeWorld extends World
     _addCurrent(current);
     add(ScreenHitbox());
     _textComponent = TextComponent(
-      text: 'Rays #${_rays.length}',
+      text: '',
       priority: hudPriority,
       position: Vector2(
         (playArea.width * 0.5) - 2,
@@ -559,8 +794,9 @@ class RaysInShapeWorld extends World
       ),
       _textComponent,
     ]);
-    _rays = randomRays(_numRays);
-    _createCircles();
+    _fillCache();
+    addAll(circleComponents);
+    _isReady = true;
   }
 
   final Map<Ray2, RaycastResult<ShapeHitbox>?> _intersections = {};
@@ -628,22 +864,9 @@ class RaysInShapeWorld extends World
   }
 
   void _updateTimerText(double elapsed, double total) {
-    var message = '#${_rays.length} ';
-    var shape = '';
-    switch (_componentIndex) {
-      case 0:
-        shape = 'circle';
-      case 1:
-        shape = 'rectangle';
-      case 2:
-        shape = 'relative';
-      default:
-        shape = TestPaths.names[_componentIndex - 3];
-    }
-    message += '$shape ';
-    message += elapsedString(elapsed).padLeft(7);
-    message += '/${elapsedString(total).padLeft(7)}';
-    _textComponent.text = message;
+    _textComponent.text =
+        '${elapsedString(elapsed).padLeft(7)}'
+        '/${elapsedString(total).padLeft(7)}';
   }
 
   String elapsedString(double elapsed) {

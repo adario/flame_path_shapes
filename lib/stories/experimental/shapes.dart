@@ -2,25 +2,63 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:collection/collection.dart';
-import 'package:flame_path_shapes/commons/paths.dart';
+import 'package:flame_path_shapes/commons/test_path_knob.dart';
 import 'package:flame/components.dart';
 import 'package:flame/experimental.dart';
 import 'package:flame/extensions.dart' show Aabb2Extension, PathExtension;
 import 'package:flame/game.dart';
 import 'package:flame/palette.dart';
+import 'package:flame_test/test_paths.dart';
 
-class ShapesExample extends FlameGame {
+class ShapesExample extends FlameGame with TestPathSelectable {
   static const description = '''
     This example shows multiple raw `Shape`s, and random points whose color
     should match the colors of the shapes that they fall in. Points that are
-    outside of any shape should be grey.
+    outside of any shape should be grey. The shape made from a path is chosen
+    randomly, and can be changed with the Shape knob, which also removes all
+    the points.
   ''';
+
+  /// Shows the shape with the given index in [TestPaths.names], or a random
+  /// one if there is none, which is passed to [onShapeLoaded].
+  ShapesExample({int? shape})
+    : _shape = shape ?? Random().nextInt(TestPaths.count);
+
+  int _shape;
+  var _isReady = false;
+  ShapesComponent? _shapesComponent;
+  DotsComponent? _dotsComponent;
+
+  /// Replaces the shape made from a path, which also removes all the points.
+  @override
+  void setShape(int shape) {
+    if (shape == _shape) {
+      return;
+    }
+    _shape = shape;
+    if (_isReady) {
+      _addShapes();
+    }
+  }
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    _addShapes();
+    add(FpsTextComponent(position: Vector2(8, size.y - 24), priority: 1));
+    _isReady = true;
+    onShapeLoaded?.call(_shape);
+  }
+
+  void _addShapes() {
+    _shapesComponent?.removeFromParent();
+    _dotsComponent?.removeFromParent();
+
     const flameSize = Size(200, 200);
-    final flame = randomPath(flameSize).shift(const Offset(300, 350));
+    final flame = TestPaths.byIndex(
+      _shape,
+      flameSize,
+    ).shift(const Offset(300, 350));
     final contours = flame.contours;
     // Sorted by size, so that the largest one is drawn first and can be used
     // to approximate full inclusion.
@@ -60,9 +98,8 @@ class ShapesExample extends FlameGame {
       for (final isDisjoint in disjoint)
         if (isDisjoint) disjointColor else overlapColor,
     ];
-    add(ShapesComponent(shapes, colors));
-    add(DotsComponent(shapes, colors));
-    add(FpsTextComponent(position: Vector2(8, size.y - 24), priority: 1));
+    add(_shapesComponent = ShapesComponent(shapes, colors));
+    add(_dotsComponent = DotsComponent(shapes, colors));
   }
 
   /// Whether each of the [polygons], which have to be sorted by size, is

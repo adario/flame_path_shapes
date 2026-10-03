@@ -1,12 +1,13 @@
 import 'package:flame_path_shapes/commons/commons.dart';
 import 'package:flame_path_shapes/commons/example_use_case.dart';
+import 'package:flame_path_shapes/commons/test_path_knob.dart';
 // import 'package:flame_path_shapes/stories/experimental/layout_component_example_1.dart';
 // import 'package:flame_path_shapes/stories/experimental/layout_component_example_2.dart';
 // import 'package:flame_path_shapes/stories/experimental/layout_component_example_3.dart';
 // import 'package:flame_path_shapes/stories/experimental/layout_component_example_size.dart';
 import 'package:flame_path_shapes/stories/experimental/shapes.dart';
 // import 'package:flame/experimental.dart';
-import 'package:flame/game.dart';
+// import 'package:flame/game.dart';
 // import 'package:flutter/rendering.dart';
 import 'package:widgetbook/widgetbook.dart';
 
@@ -16,7 +17,12 @@ WidgetbookComponent experimentalStories() {
     useCases: [
       ExampleUseCase(
         name: 'Shapes',
-        builder: (_) => GameWidget(game: ShapesExample()),
+        builder: (context) {
+          return TestPathStory(
+            shape: testPathKnob(context),
+            create: (shape) => ShapesExample(shape: shape),
+          );
+        },
         codeLink: baseLink('experimental/shapes.dart'),
         info: ShapesExample.description,
       ),

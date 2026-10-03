@@ -21,16 +21,6 @@ mixin PathsCreationMixin on FlameGame {
   /// collision detection cannot tell where they are.
   final _occupied = <_Area>[];
 
-  var _lastRandom = -1;
-  int get nextRandomPath {
-    var index = random.nextIntBetween(0, TestPaths.count);
-    while (index == _lastRandom) {
-      index = random.nextIntBetween(0, TestPaths.count);
-    }
-    _lastRandom = index;
-    return index;
-  }
-
   /// A random position for the center of something with the given
   /// [dimension], such that it is fully within the game.
   Vector2 randomPosition(Size dimension) {
@@ -106,11 +96,12 @@ mixin PathsCreationMixin on FlameGame {
     );
   }
 
-  /// Adds [numPaths] random test paths at random positions, at least [margin]
-  /// away from each other and from what was added before.
+  /// Adds [numPaths] different random test paths at random positions, at
+  /// least [margin] away from each other and from what was added before.
   ///
-  /// A test path that does not fit anywhere after [_maxAttempts] positions is
-  /// left out, so fewer than [numPaths] paths may be added.
+  /// There are at most [TestPaths.count] test paths. A test path that does not
+  /// fit anywhere after [_maxAttempts] positions is left out, so fewer than
+  /// [numPaths] paths may be added.
   Future<void> addTestPaths(
     Paint paint, {
     int numPaths = 5,
@@ -118,9 +109,11 @@ mixin PathsCreationMixin on FlameGame {
     double margin = 10,
   }) async {
     const pathSize = Size.square(100);
-    for (var index = 0; index < numPaths; ++index) {
+    final paths = List.generate(TestPaths.count, (index) => index)
+      ..shuffle(random);
+    for (final path in paths.take(numPaths)) {
       final component = await svgComponent(
-        nextRandomPath,
+        path,
         pathSize,
         paint: paint,
         renderHitboxes: renderHitboxes,

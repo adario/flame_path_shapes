@@ -37,6 +37,8 @@ around trying not to hit them.
       ..strokeWidth = 3.0;
     add(ScreenHitbox());
     addFixedPaths(paint);
+    // The test paths keep away from where the moving circle starts.
+    addOccupiedCircle(origin, 5);
     await addTestPaths(paint);
   }
 

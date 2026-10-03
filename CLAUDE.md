@@ -4,12 +4,12 @@
 
 `flame_path_shapes`: Flutter/Flame testbed app for a proposed Flame feature — using `Path` objects as shapes (render + hitbox) and importing SVG files as `Path`s. Not published (`publish_to: none`). Visual demo: `README.md` / `screenshots/flame_path_shapes.gif` (modified `RaysInShapeExample`).
 
-It is a trimmed copy of the Flame `examples` app (Dashbook-based), with the examples that deal with shapes/hitboxes/gestures rewritten to use the new path APIs.
+It is a trimmed copy of the Flame `examples` app (Widgetbook-based, migrated from Dashbook like upstream commit `2176fb6d`), with the examples that deal with shapes/hitboxes/gestures rewritten to use the new path APIs.
 
 ## Environment / tooling
 
 - Dart SDK `^3.13.2` (uses dot-shorthand syntax like `.round`, `.bevel`), Flutter.
-- `pubspec.yaml` uses `dependency_overrides` with **local paths** into the sibling Flame checkout: `../flame/packages/{flame,flame_forge2d,flame_test,flame_svg}`. The commented-out block is the git alternative (`github.com/adario/flame`, ref `feat/path-svgs`). Flame source: `../flame` (currently on branch `feat/path-svgs`, merged with upstream `main`). Fixing a bug may mean editing `../flame`, not just this repo.
+- `pubspec.yaml` uses `dependency_overrides` pointing to the **git** fork (`github.com/adario/flame`, ref `feat/path-svgs`, `packages/{flame,flame_forge2d,flame_test,flame_svg}`); switch to local paths (`../flame/packages/...`) to test unpushed fork changes. Flame source: `../flame` (currently on branch `feat/path-svgs`, merged with upstream `main`). Fixing a bug may mean editing `../flame`, not just this repo.
 - Other sibling dirs in `../`: `flame_extended_svg`, `flutter_games_compilation`, `repaint`, `instructions.txt` (original task prompt).
 - Lints: `flutter_lints` via `analysis_options.yaml` (android/ios/web/macos excluded); `flame_lint` is a dev dependency but not included. `flutter analyze`: 5 pre-existing `info` lints, no errors/warnings (copied example code).
 - Tests: only `test/widget_test.dart`. CI: `.github/workflows/main.yml`.
@@ -19,11 +19,16 @@ It is a trimmed copy of the Flame `examples` app (Dashbook-based), with the exam
 
 ```
 lib/
-  main.dart                 Dashbook entry; only addCollisionDetectionStories,
-                            addExperimentalStories, addInputStories enabled
-                            (rest commented out — those example dirs were not copied)
+  main.dart                 Widgetbook entry (runAsWidgetbook); only
+                            collisionDetectionStories, experimentalStories,
+                            inputStories enabled (rest commented out — those
+                            example dirs were not copied)
   commons/
     commons.dart            baseLink() -> upstream examples URL
+    example_app.dart        ExampleApp (Widgetbook appBuilder: title bar, info
+                            dialog, code link) — copied from fork
+    example_use_case.dart   ExampleUseCase (WidgetbookUseCase with codeLink/info,
+                            game not restarted on unrelated rebuilds) — from fork
     paths.dart              Paints (whiteStroke, pathStroke, InteractiveStatePaints:
                             lightStrokes/greenStrokes/redStrokes), randomPath(),
                             svgComponent(), pathComponent(), pathComponentWith()
@@ -63,7 +68,7 @@ Branch `feat/path-svgs` vs upstream `main` adds only the SVG/test-path pieces; `
 
 - Match Flame style: single quotes, trailing commas, `dart format` (80 cols), `final`/`const` where possible.
 - Reuse paints from `paths.dart` (create `Paint`s once, not per frame).
-- Example classes expose `static const description`; stories are registered in each folder's index file (`collision_detection.dart`, `experimental.dart`, `input.dart`).
+- Example classes expose `static const description`; stories are `ExampleUseCase`s in each folder's `WidgetbookComponent xxxStories()` index file (`collision_detection.dart`, `experimental.dart`, `input.dart`).
 
 ## Commands
 
@@ -71,5 +76,5 @@ Branch `feat/path-svgs` vs upstream `main` adds only the SVG/test-path pieces; `
 flutter pub get
 flutter analyze
 flutter test
-flutter run -d macos     # or chrome; Dashbook shows story list
+flutter run -d macos     # or chrome; Widgetbook shows story list
 ```

@@ -760,6 +760,8 @@ class RaysInShapeWorld extends World
           renderHitboxes: true,
         ),
     ];
+    // Rotate the paths around the center of their area.
+    svgs.forEach(anchorAtCentroid);
     _components.addAll(svgs);
   }
 

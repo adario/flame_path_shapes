@@ -81,6 +81,46 @@ Path randomPath(Size size) {
   return TestPaths.byIndex(_rnd.nextIntBetween(0, TestPaths.count), size);
 }
 
+/// Moves the anchor of the [component] to the centroid of the polygons of its
+/// [PathHitbox], without moving the component on screen, so that it rotates
+/// and scales around the center of its area instead of the center of its
+/// bounds.
+void anchorAtCentroid(PositionComponent component) {
+  final hitbox = component.children.whereType<PathHitbox>().firstOrNull;
+  if (hitbox == null) {
+    return;
+  }
+  // Twice the total area, as the shoelace formula sums twice the areas.
+  var area = 0.0;
+  final sum = Vector2.zero();
+  for (final polygon in hitbox.polygons) {
+    // The shoelace formula, which gives the centroid of each polygon weighted
+    // by its area.
+    for (var i = 0; i < polygon.length; i++) {
+      final a = polygon[i];
+      final b = polygon[(i + 1) % polygon.length];
+      final cross = a.x * b.y - b.x * a.y;
+      area += cross;
+      sum.x += (a.x + b.x) * cross;
+      sum.y += (a.y + b.y) * cross;
+    }
+  }
+  if (area == 0) {
+    return;
+  }
+  // The hitbox has a top left anchor and no angle within the component.
+  final centroid = sum / (3 * area)
+    ..multiply(hitbox.scale)
+    ..add(hitbox.position);
+  // Where the centroid is in the parent, which becomes the position of the
+  // component once the anchor is there.
+  final position = component.positionOf(centroid);
+  final size = component.size;
+  component
+    ..anchor = Anchor(centroid.x / size.x, centroid.y / size.y)
+    ..position.setFrom(position);
+}
+
 const List<Paint> _emptyLayers = [];
 Future<PositionComponent> svgComponent(
   int index,

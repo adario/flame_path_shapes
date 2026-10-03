@@ -1,6 +1,7 @@
 import 'package:flame_path_shapes/commons/button_knob.dart';
 import 'package:flame_path_shapes/commons/commons.dart';
 import 'package:flame_path_shapes/commons/example_use_case.dart';
+import 'package:flame_path_shapes/commons/test_path_knob.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/bouncing_ball_example.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/circles_example.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/collidable_animation_example.dart';
@@ -79,7 +80,13 @@ WidgetbookComponent collisionDetectionStories() {
       ),
       ExampleUseCase(
         name: 'Raycasting Max Distance',
-        builder: (_) => GameWidget(game: RaycastMaxDistanceExample()),
+        builder: (context) {
+          return TestPathStory(
+            shape: testPathKnob(context),
+            rotate: rotateKnob(context),
+            create: (shape) => RaycastMaxDistanceExample(shape: shape),
+          );
+        },
         codeLink: baseLink(
           'collision_detection/raycast_max_distance_example.dart',
         ),

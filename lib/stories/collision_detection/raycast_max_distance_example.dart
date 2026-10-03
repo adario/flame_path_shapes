@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flame_path_shapes/commons/paths.dart';
+import 'package:flame_path_shapes/commons/test_path_knob.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -12,12 +13,35 @@ import 'package:flame_noise/flame_noise.dart';
 import 'package:flame_test/test_paths.dart';
 import 'package:flutter/material.dart';
 
-class RaycastMaxDistanceExample extends FlameGame with HasCollisionDetection {
+class RaycastMaxDistanceExample extends FlameGame
+    with HasCollisionDetection, TestPathSelectable {
   static const description = '''
 This examples showcases how raycast APIs can be used to detect hits within certain range.
+The moving shape is chosen randomly, and can be changed with the Shape knob and
+rotated with the Rotate knob.
 ''';
 
+  /// Shows the shape with the given index in [TestPaths.names], or a random
+  /// one if there is none, which is passed to [onShapeLoaded].
+  RaycastMaxDistanceExample({int? shape})
+    : _shape = shape ?? Random().nextInt(TestPaths.count);
+
   static const _maxDistance = 50.0;
+  static const _rotateAmplitude = pi * 2;
+  static const _rotateDuration = 2.0;
+
+  int _shape;
+  var _isReady = false;
+
+  /// Moves the shape back and forth, while the shape rotates within it.
+  final _carrier = PositionComponent();
+  PositionComponent? _movingShape;
+  var _isRotating = false;
+  Effect? _rotate;
+
+  /// Counts the requests for a moving shape, as loading one is asynchronous,
+  /// so that only the latest one is added.
+  var _shapeRequests = 0;
 
   late Ray2 _ray;
   late _Character _character;
@@ -42,6 +66,19 @@ This examples showcases how raycast APIs can be used to detect hits within certa
       height: 180,
     );
 
+    // The carrier moves back and forth at all times, whatever the shape and
+    // its rotation.
+    _carrier.add(
+      MoveByEffect(
+        Vector2(50, 0),
+        EffectController(
+          duration: 2,
+          alternate: true,
+          infinite: true,
+        ),
+      ),
+    );
+    world.add(_carrier);
     await _addMovingShape();
 
     world.add(
@@ -58,30 +95,68 @@ This examples showcases how raycast APIs can be used to detect hits within certa
       origin: _character.absolutePosition,
       direction: Vector2(1, 0),
     );
+    _isReady = true;
+    onShapeLoaded?.call(_shape);
+  }
+
+  /// Replaces the moving shape, which keeps moving and keeps its angle.
+  @override
+  void setShape(int shape) {
+    if (shape == _shape) {
+      return;
+    }
+    _shape = shape;
+    if (_isReady) {
+      _addMovingShape();
+    }
+  }
+
+  /// Rotates the moving shape or stops it, keeping its current angle.
+  @override
+  void setRotate(bool rotate) {
+    if (rotate == _isRotating) {
+      return;
+    }
+    _isRotating = rotate;
+    _updateRotate();
+  }
+
+  void _updateRotate() {
+    _rotate?.removeFromParent();
+    _rotate = null;
+    if (_isRotating) {
+      _movingShape?.add(
+        _rotate = RotateEffect.by(
+          _rotateAmplitude,
+          EffectController(duration: _rotateDuration, infinite: true),
+        ),
+      );
+    }
   }
 
   Future<void> _addMovingShape() async {
-    final rnd = Random();
+    final request = ++_shapeRequests;
     final size = Vector2(20, 40) * 1.5;
-    final path = rnd.nextIntBetween(0, TestPaths.count);
-    final component =
-        await svgComponent(
-            path,
-            size.toSize(),
-            paint: BasicPalette.red.paint()..style = .stroke,
-          )
-          ..anchor = .center;
-    component.add(
-      MoveByEffect(
-        Vector2(50, 0),
-        EffectController(
-          duration: 2,
-          alternate: true,
-          infinite: true,
-        ),
-      ),
+    final component = await svgComponent(
+      _shape,
+      size.toSize(),
+      paint: BasicPalette.red.paint()..style = .stroke,
     );
-    world.add(component);
+    if (request != _shapeRequests) {
+      // A newer shape has been requested while this one was loading.
+      return;
+    }
+    // The pivot of the shape, the centroid of its area, is at the origin of
+    // the carrier, so that the shape rotates around it in its own coordinate
+    // system while the carrier moves it.
+    anchorAtCentroid(component);
+    component
+      ..position.setZero()
+      ..angle = _movingShape?.angle ?? 0;
+    _movingShape?.removeFromParent();
+    _movingShape = component;
+    _updateRotate();
+    _carrier.add(component);
   }
 
   @override

@@ -7,6 +7,7 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/game.dart';
+import 'package:flame_test/test_paths.dart';
 import 'package:flutter/material.dart';
 
 enum Shapes { circle, rectangle, polygon, path }
@@ -27,7 +28,9 @@ class _GestureHitboxesWorld extends World
   final _rng = Random();
 
   PositionComponent randomShape(Vector2 position) {
-    final shapeType = Shapes.values[_rng.nextInt(Shapes.values.length)];
+    // Each test path counts as a shape of its own.
+    final choice = _rng.nextInt(Shapes.path.index + TestPaths.count);
+    final shapeType = Shapes.values[min(choice, Shapes.path.index)];
     final shapeSize =
         Vector2.all(100) + Vector2.all(50.0).scaled(_rng.nextDouble());
     final shapeAngle = _rng.nextDouble() * 6;

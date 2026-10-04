@@ -14,8 +14,8 @@ class DominoExample({bool showPieces = false}) extends Forge2DExampleGame {
     The classic domino tower: vertical dominoes carry horizontal ones as
     planks, level by level, with braces at the edges.
 
-    The tower stands on its own until you tap the screen, which drops a shape
-    that topples it. The shape collides as the convex pieces of its outline,
+    The tower stands on its own until you tap the screen, which drops a random
+    shape, different from the last one, that topples it. The shape collides as the convex pieces of its outline,
     which the Show pieces knob draws.
   ''';
 
@@ -43,8 +43,32 @@ class DominoExampleWorld({bool showPieces = false})
 
   int _tint = 0;
 
-  /// The index in [TestPaths.names] of the dropped shapes.
-  final int _shape = TestPaths.names.indexOf('flame');
+  final _random = Random();
+
+  /// The indices in [TestPaths.names] of the shapes still to be dropped in
+  /// this round, in which each test path is dropped once, in random order.
+  final _shapes = <int>[];
+
+  /// The index in [TestPaths.names] of the last dropped shape.
+  int? _lastShape;
+
+  /// The index in [TestPaths.names] of the next shape to drop, which is never
+  /// the same as the last one.
+  int _nextShape() {
+    if (_shapes.isEmpty) {
+      _shapes.addAll(
+        List.generate(TestPaths.count, (i) => i)..shuffle(_random),
+      );
+      // The shapes are taken from the end, and the first one of a round must
+      // not repeat the last one of the previous round.
+      if (_shapes.last == _lastShape) {
+        _shapes
+          ..[_shapes.length - 1] = _shapes.first
+          ..[0] = _lastShape!;
+      }
+    }
+    return _lastShape = _shapes.removeLast();
+  }
 
   bool _showPieces = showPieces;
 
@@ -152,10 +176,14 @@ class DominoExampleWorld({bool showPieces = false})
   }
 
   @override
-  void onTapDown(TapDownEvent info) {
-    final position = info.localPosition;
+  void onTapDown(TapDownEvent event) {
+    final position = event.localPosition;
+    final shapeIndex = _nextShape();
+    print(
+      'Dropping shape $shapeIndex = "${TestPaths.names[shapeIndex]}" at $position',
+    );
     add(
-      PathShape(position, TestPaths.byIndex(_shape, shapeSize.toSize()))
+      PathShape(position, TestPaths.byIndex(shapeIndex, shapeSize.toSize()))
         ..paint = (Paint()..color = ExampleColors.dynamicColor(_tint++))
         ..renderBody = _showPieces,
     );
@@ -208,40 +236,65 @@ class PathShape(final Vector2 initialPosition, final Path path, {Vector2? size})
 
   final Vector2 size = size ?? Vector2(2, 3);
 
+  /// The linear slop of Box2D in meters, which Forge2D doesn't expose: the
+  /// points of a polygon closer than 4 times it are welded, and the ones
+  /// closer than twice it to an edge are dropped, see `b2ComputeHull`.
+  static const linearSlop = 0.005;
+
   late final List<List<Vector2>> _pieces;
 
   @override
   double get outlineWidth => 0.04;
 
-  @override
-  Future<void> onLoad() async {
-    // The contour is laid out in pixels rather than in meters, so that the
-    // default sampling of the component follows it closely, and then the
-    // component is scaled down to meters.
-    final pixels = gameRef.metersToPixels;
+  /// The component that draws the first contour of the [path], fitted within
+  /// [size] meters, with [pixels] per meter.
+  ///
+  /// The contour is laid out in pixels rather than in meters, so that the
+  /// default sampling of the component follows it closely, and then the
+  /// component is scaled down to meters.
+  static PathComponent contourComponent(
+    Path path,
+    Vector2 size,
+    double pixels,
+  ) {
     final metric = path.computeMetrics().first;
     final contour = metric.extractPath(0, metric.length)..close();
-    final color = paint.color;
-    final component = PathComponent(
+    return PathComponent(
       path: contour.resizeTo((size * pixels).toSize(), keepRatio: true),
       anchor: Anchor.center,
       scale: Vector2.all(1 / pixels),
-      paintLayers: [
+    );
+  }
+
+  /// The convex pieces of the polygons of the [component], in the coordinates
+  /// of its parent, which Box2D accepts as polygons.
+  static List<List<Vector2>> piecesOf(PathComponent component) {
+    return [
+      for (final polygon in component.polygons)
+        ...convexPieces(
+          [for (final vertex in polygon) component.positionOf(vertex)],
+          maxVertices: Polygon.maxVertices,
+          minDistance: 4 * linearSlop,
+          minWidth: 2 * linearSlop,
+        ),
+    ];
+  }
+
+  @override
+  Future<void> onLoad() async {
+    final pixels = gameRef.metersToPixels;
+    final color = paint.color;
+    final component = contourComponent(path, size, pixels)
+      ..paintLayers = [
         Paint()..color = color.withValues(alpha: 0.28),
         Paint()
           ..color = color.withValues(alpha: 0.95)
           ..style = PaintingStyle.stroke
           ..strokeWidth = outlineWidth * pixels,
-      ],
-    );
+      ];
     // The body is created from the pieces by super.onLoad, and again whenever
     // it is mounted after being removed, so they are worked out only once.
-    _pieces = [
-      for (final polygon in component.polygons)
-        ...convexPieces([
-          for (final vertex in polygon) component.positionOf(vertex),
-        ], maxVertices: Polygon.maxVertices),
-    ];
+    _pieces = piecesOf(component);
     await super.onLoad();
     add(component);
   }

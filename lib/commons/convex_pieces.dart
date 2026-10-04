@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flame/extensions.dart';
 
 /// Splits a simple [polygon] into convex polygons of at most [maxVertices]
@@ -5,30 +7,87 @@ import 'package:flame/extensions.dart';
 ///
 /// The polygon is split into triangles by ear clipping first, which are then
 /// merged with their neighbors as long as they stay convex and within
-/// [maxVertices] (the Hertel-Mehlhorn algorithm). The triangles whose area is
-/// below [minArea] are left out, as they would be degenerate.
+/// [maxVertices] (the Hertel-Mehlhorn algorithm).
+///
+/// Physics engines reject the polygons that are too small for their
+/// tolerances, so the [polygon] is cleaned up first: of the consecutive
+/// vertices closer than [minDistance], only the first one is kept, and the
+/// vertices closer than half of it to the line through their neighbors are
+/// left out. Then, the pieces narrower than [minWidth] are left out, as well
+/// as the ones with fewer than three vertices that are [minDistance] apart.
+/// For Box2D, [minDistance] is 4 times its linear slop and [minWidth] twice
+/// it, see `b2ComputeHull`.
 ///
 /// The pieces reuse the vertices of the [polygon], in the same direction.
 List<List<Vector2>> convexPieces(
   List<Vector2> polygon, {
   int maxVertices = 8,
-  double minArea = 1e-6,
+  double minDistance = 0,
+  double minWidth = 0,
 }) {
   assert(maxVertices >= 3, 'A piece needs at least three vertices');
-  final n = polygon.length;
+  final vertices = _clean(polygon, minDistance);
+  final n = vertices.length;
   if (n < 3) {
     return const [];
   }
   // The pieces are worked out on indices of vertices going counterclockwise,
   // that is with a positive area, and turned back into vertices at the end.
-  final isClockwise = _doubleArea(polygon) < 0;
+  final isClockwise = _doubleArea(vertices) < 0;
   final indices = List.generate(n, (i) => isClockwise ? n - 1 - i : i);
-  final pieces = _triangulate(polygon, indices, minArea);
-  _merge(polygon, pieces, maxVertices, minArea);
+  final pieces = _triangulate(vertices, indices);
+  // Corners that are reflex by less than half of the minimum width are
+  // accepted as convex, since the engine straightens them anyway.
+  _merge(vertices, pieces, maxVertices, minWidth / 2);
   return [
     for (final piece in pieces)
-      [for (final i in isClockwise ? piece.reversed : piece) polygon[i]],
+      if (_isWideEnough(vertices, piece, minDistance, minWidth))
+        [for (final i in isClockwise ? piece.reversed : piece) vertices[i]],
   ];
+}
+
+/// The vertices of the [polygon] without the ones closer than [minDistance]
+/// to the previous one, nor the ones closer than half of it to the line
+/// through their neighbors.
+List<Vector2> _clean(List<Vector2> polygon, double minDistance) {
+  final vertices = <Vector2>[];
+  for (final vertex in polygon) {
+    if (vertices.isEmpty || !_isWelded(vertex, vertices.last, minDistance)) {
+      vertices.add(vertex);
+    }
+  }
+  while (vertices.length > 1 &&
+      _isWelded(vertices.last, vertices.first, minDistance)) {
+    vertices.removeLast();
+  }
+  var hasRemoved = true;
+  while (hasRemoved && vertices.length > 3) {
+    hasRemoved = false;
+    for (var i = 0; i < vertices.length; i++) {
+      final m = vertices.length;
+      final a = vertices[(i - 1 + m) % m];
+      final b = vertices[i];
+      final c = vertices[(i + 1) % m];
+      final chord = a.distanceTo(c);
+      // A vertex whose neighbors coincide is the tip of a spike.
+      final distance = chord == 0
+          ? a.distanceTo(b)
+          : _cross(a, b, c).abs() / chord;
+      if (distance < minDistance / 2) {
+        vertices.removeAt(i);
+        hasRemoved = true;
+        break;
+      }
+    }
+  }
+  return vertices;
+}
+
+/// Whether the vertices [a] and [b] are the same, or closer than
+/// [minDistance].
+bool _isWelded(Vector2 a, Vector2 b, double minDistance) {
+  final distance = a.distanceTo(b);
+  return distance == 0 || distance < minDistance;
 }
 
 /// Twice the signed area of the [polygon], positive if it is counterclockwise.
@@ -50,11 +109,7 @@ double _cross(Vector2 a, Vector2 b, Vector2 c) {
 
 /// Splits the counterclockwise polygon given by the [indices] of [vertices]
 /// into triangles, by clipping its ears.
-List<List<int>> _triangulate(
-  List<Vector2> vertices,
-  List<int> indices,
-  double minArea,
-) {
+List<List<int>> _triangulate(List<Vector2> vertices, List<int> indices) {
   final remaining = List.of(indices);
   final triangles = <List<int>>[];
   while (remaining.length >= 3) {
@@ -72,7 +127,8 @@ List<List<int>> _triangulate(
     ];
     remaining.removeAt(ear);
     final [a, b, c] = [for (final i in triangle) vertices[i]];
-    if (_cross(a, b, c) >= 2 * minArea) {
+    // Clipping a collinear vertex leaves no triangle.
+    if (_cross(a, b, c) > 0) {
       triangles.add(triangle);
     }
   }
@@ -115,12 +171,12 @@ int _findEar(List<Vector2> vertices, List<int> remaining) {
 }
 
 /// Merges the [pieces] that share an edge, as long as the result is convex
-/// and has at most [maxVertices] vertices.
+/// within the [tolerance] and has at most [maxVertices] vertices.
 void _merge(
   List<Vector2> vertices,
   List<List<int>> pieces,
   int maxVertices,
-  double minArea,
+  double tolerance,
 ) {
   var hasMerged = true;
   while (hasMerged) {
@@ -130,7 +186,7 @@ void _merge(
         final merged = _union(pieces[i], pieces[j]);
         if (merged != null &&
             merged.length <= maxVertices &&
-            _isConvex(vertices, merged, minArea)) {
+            _isConvex(vertices, merged, tolerance)) {
           pieces[i] = merged;
           pieces.removeAt(j);
           hasMerged = true;
@@ -163,15 +219,52 @@ List<int>? _union(List<int> a, List<int> b) {
   return null;
 }
 
-/// Whether the counterclockwise [piece] has no reflex corners, give or take
-/// the ones that are almost straight.
-bool _isConvex(List<Vector2> vertices, List<int> piece, double minArea) {
+/// Whether the counterclockwise [piece] has no reflex corners, except for the
+/// ones closer than the [tolerance] to the line through their neighbors.
+bool _isConvex(List<Vector2> vertices, List<int> piece, double tolerance) {
   final m = piece.length;
   for (var i = 0; i < m; i++) {
     final a = vertices[piece[(i - 1 + m) % m]];
     final b = vertices[piece[i]];
     final c = vertices[piece[(i + 1) % m]];
-    if (_cross(a, b, c) < -2 * minArea) {
+    if (_cross(a, b, c) < -tolerance * a.distanceTo(c)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// Whether the convex [piece] keeps at least three vertices when the ones
+/// closer than [minDistance] to a previous one are left out, and is at least
+/// [minWidth] wide.
+///
+/// The width of a convex polygon is the smallest distance between one of its
+/// edges and the vertex farthest from it.
+bool _isWideEnough(
+  List<Vector2> vertices,
+  List<int> piece,
+  double minDistance,
+  double minWidth,
+) {
+  final points = <Vector2>[];
+  for (final i in piece) {
+    final vertex = vertices[i];
+    if (!points.any((point) => _isWelded(vertex, point, minDistance))) {
+      points.add(vertex);
+    }
+  }
+  if (points.length < 3) {
+    return false;
+  }
+  for (var i = 0; i < points.length; i++) {
+    final a = points[i];
+    final b = points[(i + 1) % points.length];
+    final length = a.distanceTo(b);
+    var farthest = 0.0;
+    for (final point in points) {
+      farthest = max(farthest, _cross(a, b, point).abs() / length);
+    }
+    if (farthest < minWidth) {
       return false;
     }
   }

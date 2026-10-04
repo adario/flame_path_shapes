@@ -16,7 +16,7 @@ import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/weld_joint.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/wheel_joint.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/raycast_example.dart';
-// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/revolute_joint_with_motor_example.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/revolute_joint_with_motor_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/sprite_body_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/tap_callbacks_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/widget_example.dart';
@@ -58,12 +58,12 @@ WidgetbookComponent forge2DStories() {
         codeLink: link('contact_callbacks_example.dart'),
         info: ContactCallbacksExample.description,
       ),
-      // ExampleUseCase(
-      //   name: 'RevoluteJoint with Motor',
-      //   builder: (_) => GameWidget(game: RevoluteJointWithMotorExample()),
-      //   codeLink: link('revolute_joint_with_motor_example.dart'),
-      //   info: RevoluteJointWithMotorExample.description,
-      // ),
+      ExampleUseCase(
+        name: 'RevoluteJoint with Motor',
+        builder: (_) => GameWidget(game: RevoluteJointWithMotorExample()),
+        codeLink: link('revolute_joint_with_motor_example.dart'),
+        info: RevoluteJointWithMotorExample.description,
+      ),
       // ExampleUseCase(
       //   name: 'Sprite Bodies',
       //   builder: (_) => GameWidget(game: SpriteBodyExample()),

@@ -128,6 +128,58 @@ void main() {
       }
     }
   });
+
+  // flame_forge2d warns about the shapes of moving bodies that are less than
+  // 0.1 meters across (5 speculative distances), and each piece is a shape.
+  group('PathShape pieces of the examples are large enough for Forge2D', () {
+    const minSide = 5 * 4 * PathShape.linearSlop;
+    final allPaths = TestPaths.names;
+    // The size of the pieces doesn't grow steadily with the size of the
+    // shape, so the whole range of random sizes is checked in small steps.
+    final revoluteSizes = [
+      for (var i = 0; i <= 10; i++) Vector2.all(3 + i * 0.05),
+    ];
+    const revolutePaths = [
+      'abstract',
+      'alien1',
+      'flame',
+      'invader1',
+      'invader2',
+    ];
+    for (final (example, size, pixels, paths) in [
+      ('domino', Vector2(2, 3), 24.0, allPaths),
+      ('contact callbacks', Vector2.all(4), 10.0, allPaths),
+      ('tap callbacks', Vector2.all(4), 20.0, allPaths),
+      ('drag callbacks', Vector2.all(10), 10.0, allPaths),
+      for (final size in revoluteSizes)
+        ('revolute joint with motor', size, 10.0, revolutePaths),
+    ]) {
+      for (final name in paths) {
+        final i = TestPaths.names.indexOf(name);
+        test('$name in the $example example, at ${size.x} m', () {
+          final component = PathShape.contourComponent(
+            TestPaths.byIndex(i, size.toSize()),
+            size,
+            pixels,
+          );
+          for (final piece in PathShape.piecesOf(component)) {
+            expect(_largestSide(piece), greaterThanOrEqualTo(minSide));
+          }
+        });
+      }
+    }
+  });
+}
+
+/// The largest side of the bounding box of the [polygon], which is how
+/// flame_forge2d measures shapes.
+double _largestSide(List<Vector2> polygon) {
+  final xs = polygon.map((vertex) => vertex.x);
+  final ys = polygon.map((vertex) => vertex.y);
+  return math.max(
+    xs.reduce(math.max) - xs.reduce(math.min),
+    ys.reduce(math.max) - ys.reduce(math.min),
+  );
 }
 
 double _signedArea(List<Vector2> polygon) {

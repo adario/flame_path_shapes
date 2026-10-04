@@ -20,9 +20,11 @@ class PathShape(final Vector2 initialPosition, final Path path, {Vector2? size})
 
   final Vector2 size = size ?? Vector2(2, 3);
 
-  /// The linear slop of Box2D in meters, which Forge2D doesn't expose: the
-  /// points of a polygon closer than 4 times it are welded, and the ones
-  /// closer than twice it to an edge are dropped, see `b2ComputeHull`.
+  /// The linear slop of Box2D in meters, as `Tolerances.linearSlop` with the
+  /// default length units, which is not used here as it needs the native
+  /// library: the points of a polygon closer than 4 times it are welded, and
+  /// the ones closer than twice it to an edge are dropped, see
+  /// `b2ComputeHull`.
   static const linearSlop = 0.005;
 
   late final List<List<Vector2>> _pieces;

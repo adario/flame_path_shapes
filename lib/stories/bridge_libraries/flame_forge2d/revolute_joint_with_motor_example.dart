@@ -1,8 +1,9 @@
 import 'dart:math';
-import 'dart:ui' hide TextStyle;
+import 'dart:ui';
 
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/balls.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/boundaries.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/hud.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/path_shape.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/spawn_layout.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/style.dart';
@@ -10,7 +11,6 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
 import 'package:flame_test/test_paths.dart';
-import 'package:flutter/painting.dart' show TextStyle;
 
 class RevoluteJointWithMotorExample() extends Forge2DExampleGame {
   static const String description = '''
@@ -30,7 +30,7 @@ class RevoluteJointWithMotorExample() extends Forge2DExampleGame {
 
 class RevoluteJointWithMotorWorld()
     extends Forge2DWorld
-    with TapCallbacks, HasGameRef<Forge2DGame> {
+    with TapCallbacks, HasGameRef<Forge2DGame>, BodiesHud {
   final random = Random();
 
   /// The indices in [TestPaths.names] of the test paths that are added.
@@ -51,13 +51,6 @@ class RevoluteJointWithMotorWorld()
 
   int _tint = 0;
 
-  var _bodyCount = 0;
-  final _bodyCountText = _TopRightText(textRenderer: _hudTextRenderer);
-
-  static final _hudTextRenderer = TextPaint(
-    style: const TextStyle(color: ExampleColors.text, fontSize: 14),
-  );
-
   @override
   Future<void> onLoad() async {
     await super.onLoad();
@@ -67,27 +60,6 @@ class RevoluteJointWithMotorWorld()
     add(CircleShuffler(center));
     add(CornerRamp(center, isMirrored: true));
     add(CornerRamp(center));
-    gameRef.camera.viewport.addAll([
-      FpsTextComponent(
-        position: Vector2.all(_TopRightText.margin),
-        textRenderer: _hudTextRenderer,
-      ),
-      _bodyCountText,
-    ]);
-    _updateBodyCount();
-  }
-
-  @override
-  void onChildrenChanged(Component child, ChildrenChangeType type) {
-    super.onChildrenChanged(child, type);
-    if (child is BodyComponent) {
-      _bodyCount += type == ChildrenChangeType.added ? 1 : -1;
-      _updateBodyCount();
-    }
-  }
-
-  void _updateBodyCount() {
-    _bodyCountText.text = 'Bodies: $_bodyCount';
   }
 
   @override
@@ -155,21 +127,6 @@ class RevoluteJointWithMotorWorld()
 
   double _randomBetween(double min, double max) {
     return min + random.nextDouble() * (max - min);
-  }
-}
-
-/// A text at the top right corner of its parent, which stays there when the
-/// parent is resized.
-class _TopRightText({super.textRenderer}) extends TextComponent {
-  this : super(anchor: Anchor.topRight);
-
-  /// The distance from the edges of the parent.
-  static const margin = 8.0;
-
-  @override
-  void onParentResize(Vector2 maxSize) {
-    super.onParentResize(maxSize);
-    position.setValues(maxSize.x - margin, margin);
   }
 }
 

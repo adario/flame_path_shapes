@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/hud.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/path_shape.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/style.dart';
 import 'package:flame/components.dart';
@@ -17,6 +18,9 @@ class DominoExample({bool showPieces = false}) extends Forge2DExampleGame {
     The tower stands on its own until you tap the screen, which drops a random
     shape, different from the last one, that topples it. The shape collides as
     the convex pieces of its outline, which the Show pieces knob draws.
+
+    The frame rate is shown at the top left, and the number of bodies at the
+    top right.
   ''';
 
   this
@@ -29,7 +33,7 @@ class DominoExample({bool showPieces = false}) extends Forge2DExampleGame {
 
 class DominoExampleWorld({bool showPieces = false})
     extends Forge2DWorld
-    with TapCallbacks, HasGameRef<Forge2DGame>, ShowPieces {
+    with TapCallbacks, HasGameRef<Forge2DGame>, ShowPieces, BodiesHud {
   this {
     this.showPieces = showPieces;
   }

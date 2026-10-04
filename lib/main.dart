@@ -1,4 +1,5 @@
 import 'package:flame_path_shapes/commons/example_app.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/flame_forge2d.dart';
 import 'package:flame_path_shapes/stories/collision_detection/collision_detection.dart';
 import 'package:flame_path_shapes/stories/experimental/experimental.dart';
 import 'package:flame_path_shapes/stories/input/input.dart';
@@ -64,7 +65,7 @@ void runAsWidgetbook() {
         // imageStories(),
 
         // Bridge package examples
-        // forge2DStories(),
+        forge2DStories(),
         // jointsStories(),
         // flameIsolateStories(),
         // flameJennyStories(),

@@ -3,7 +3,7 @@ import 'package:flame_path_shapes/commons/example_use_case.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/animated_body_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/camera_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/composition_example.dart';
-// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/contact_callbacks_example.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/contact_callbacks_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/domino_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/drag_callbacks_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/distance_joint.dart';
@@ -19,7 +19,9 @@ import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/sprite_body_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/tap_callbacks_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/widget_example.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/path_shape.dart';
 import 'package:flame/game.dart';
+import 'package:flame_forge2d/flame_forge2d.dart';
 import 'package:flutter/widgets.dart';
 import 'package:widgetbook/widgetbook.dart';
 
@@ -38,18 +40,23 @@ WidgetbookComponent forge2DStories() {
       // ),
       ExampleUseCase(
         name: 'Domino example',
-        builder: (context) => _DominoStory(
-          showPieces: context.knobs.boolean(label: 'Show pieces'),
+        builder: (context) => _ShowPiecesStory(
+          showPieces: showPiecesKnob(context),
+          create: (showPieces) => DominoExample(showPieces: showPieces),
         ),
         codeLink: link('domino_example.dart'),
         info: DominoExample.description,
       ),
-      // ExampleUseCase(
-      //   name: 'Contact Callbacks',
-      //   builder: (_) => GameWidget(game: ContactCallbacksExample()),
-      //   codeLink: link('contact_callbacks_example.dart'),
-      //   info: ContactCallbacksExample.description,
-      // ),
+      ExampleUseCase(
+        name: 'Contact Callbacks',
+        builder: (context) => _ShowPiecesStory(
+          showPieces: showPiecesKnob(context),
+          create: (showPieces) =>
+              ContactCallbacksExample(showPieces: showPieces),
+        ),
+        codeLink: link('contact_callbacks_example.dart'),
+        info: ContactCallbacksExample.description,
+      ),
       // ExampleUseCase(
       //   name: 'RevoluteJoint with Motor',
       //   builder: (_) => GameWidget(game: RevoluteJointWithMotorExample()),
@@ -158,22 +165,30 @@ WidgetbookComponent jointsStories() {
   );
 }
 
-/// Hosts a single [DominoExample] and applies the Show pieces knob to it, so
-/// that changing the knob doesn't rebuild the tower.
-class const _DominoStory({required final bool showPieces})
-    extends StatefulWidget {
-  @override
-  State<_DominoStory> createState() => _DominoStoryState();
+/// A knob to draw the convex pieces of the [PathShape]s, which is off by
+/// default.
+bool showPiecesKnob(BuildContext context) {
+  return context.knobs.boolean(label: 'Show pieces');
 }
 
-class _DominoStoryState() extends State<_DominoStory> {
-  late final _game = DominoExample(showPieces: widget.showPieces);
+/// Hosts a single game, whose world has [ShowPieces], and applies the
+/// [showPiecesKnob] to it, so that changing the knob doesn't restart the game.
+class const _ShowPiecesStory({
+  required final bool showPieces,
+  required final Forge2DGame Function(bool showPieces) create,
+}) extends StatefulWidget {
+  @override
+  State<_ShowPiecesStory> createState() => _ShowPiecesStoryState();
+}
+
+class _ShowPiecesStoryState() extends State<_ShowPiecesStory> {
+  late final _game = widget.create(widget.showPieces);
 
   @override
-  void didUpdateWidget(_DominoStory oldWidget) {
+  void didUpdateWidget(_ShowPiecesStory oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.showPieces != oldWidget.showPieces) {
-      _game.showPieces = widget.showPieces;
+      (_game.world as ShowPieces).showPieces = widget.showPieces;
     }
   }
 

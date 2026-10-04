@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flame/components.dart';
 import 'package:flame_path_shapes/commons/convex_pieces.dart';
-import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/domino_example.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/path_shape.dart';
 import 'package:flame_test/test_paths.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -83,8 +83,14 @@ void main() {
   // and 24 pixels per meter, used to be rejected by Box2D.
   group('PathShape pieces are valid Box2D polygons', () {
     for (final pixels in [10.0, 24.0]) {
-      for (final meters in [1.0, 2.0, 3.0, 4.0]) {
-        final size = Vector2(meters, meters * 1.5);
+      for (final size in [
+        Vector2(1, 1.5),
+        Vector2(2, 3),
+        Vector2(3, 4.5),
+        Vector2(4, 6),
+        // The size of the shapes in the contact callbacks example.
+        Vector2.all(4),
+      ]) {
         for (var i = 0; i < TestPaths.count; i++) {
           final name = TestPaths.names[i];
           test('$name at ${size.x} x ${size.y} m, $pixels px/m', () {

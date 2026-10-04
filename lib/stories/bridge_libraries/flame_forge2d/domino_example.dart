@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:flame_path_shapes/commons/convex_pieces.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/path_shape.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/style.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
@@ -15,8 +15,8 @@ class DominoExample({bool showPieces = false}) extends Forge2DExampleGame {
     planks, level by level, with braces at the edges.
 
     The tower stands on its own until you tap the screen, which drops a random
-    shape, different from the last one, that topples it. The shape collides as the convex pieces of its outline,
-    which the Show pieces knob draws.
+    shape, different from the last one, that topples it. The shape collides as
+    the convex pieces of its outline, which the Show pieces knob draws.
   ''';
 
   this
@@ -25,15 +25,15 @@ class DominoExample({bool showPieces = false}) extends Forge2DExampleGame {
         world: DominoExampleWorld(showPieces: showPieces),
         metersToPixels: 24,
       );
-
-  /// Draws the convex pieces of the shapes, or stops drawing them.
-  set showPieces(bool value) =>
-      (world as DominoExampleWorld).showPieces = value;
 }
 
 class DominoExampleWorld({bool showPieces = false})
     extends Forge2DWorld
-    with TapCallbacks, HasGameRef<Forge2DGame> {
+    with TapCallbacks, HasGameRef<Forge2DGame>, ShowPieces {
+  this {
+    this.showPieces = showPieces;
+  }
+
   static const dominoWidth = 0.2;
   static const dominoHeight = 1.0;
   static const baseCount = 12;
@@ -43,44 +43,7 @@ class DominoExampleWorld({bool showPieces = false})
 
   int _tint = 0;
 
-  final _random = Random();
-
-  /// The indices in [TestPaths.names] of the shapes still to be dropped in
-  /// this round, in which each test path is dropped once, in random order.
-  final _shapes = <int>[];
-
-  /// The index in [TestPaths.names] of the last dropped shape.
-  int? _lastShape;
-
-  /// The index in [TestPaths.names] of the next shape to drop, which is never
-  /// the same as the last one.
-  int _nextShape() {
-    if (_shapes.isEmpty) {
-      _shapes.addAll(
-        List.generate(TestPaths.count, (i) => i)..shuffle(_random),
-      );
-      // The shapes are taken from the end, and the first one of a round must
-      // not repeat the last one of the previous round.
-      if (_shapes.last == _lastShape) {
-        _shapes
-          ..[_shapes.length - 1] = _shapes.first
-          ..[0] = _lastShape!;
-      }
-    }
-    return _lastShape = _shapes.removeLast();
-  }
-
-  bool _showPieces = showPieces;
-
-  /// Whether the convex pieces of the shapes are drawn, which applies to the
-  /// shapes already dropped too.
-  bool get showPieces => _showPieces;
-  set showPieces(bool value) {
-    _showPieces = value;
-    for (final shape in children.whereType<PathShape>()) {
-      shape.renderBody = value;
-    }
-  }
+  final _shapes = ShuffledTestPaths();
 
   @override
   Future<void> onLoad() async {
@@ -178,14 +141,10 @@ class DominoExampleWorld({bool showPieces = false})
   @override
   void onTapDown(TapDownEvent event) {
     final position = event.localPosition;
-    final shapeIndex = _nextShape();
-    print(
-      'Dropping shape $shapeIndex = "${TestPaths.names[shapeIndex]}" at $position',
-    );
     add(
-      PathShape(position, TestPaths.byIndex(shapeIndex, shapeSize.toSize()))
+      PathShape(position, TestPaths.byIndex(_shapes.next(), shapeSize.toSize()))
         ..paint = (Paint()..color = ExampleColors.dynamicColor(_tint++))
-        ..renderBody = _showPieces,
+        ..renderBody = showPieces,
     );
   }
 }
@@ -221,101 +180,6 @@ class Domino({
       // the frame rate dips.
       ShapeDef(density: density),
     );
-  }
-}
-
-/// A body with the shape of the first contour of a [Path], fitted within
-/// [size] meters, which is drawn by a [PathComponent] and collides as the
-/// convex pieces of the polygon of that component.
-///
-/// The pieces are drawn on top of it when [renderBody] is true.
-class PathShape(final Vector2 initialPosition, final Path path, {Vector2? size})
-    extends BodyComponent
-    with GlowingBody {
-  this : super(renderBody: false);
-
-  final Vector2 size = size ?? Vector2(2, 3);
-
-  /// The linear slop of Box2D in meters, which Forge2D doesn't expose: the
-  /// points of a polygon closer than 4 times it are welded, and the ones
-  /// closer than twice it to an edge are dropped, see `b2ComputeHull`.
-  static const linearSlop = 0.005;
-
-  late final List<List<Vector2>> _pieces;
-
-  @override
-  double get outlineWidth => 0.04;
-
-  /// The component that draws the first contour of the [path], fitted within
-  /// [size] meters, with [pixels] per meter.
-  ///
-  /// The contour is laid out in pixels rather than in meters, so that the
-  /// default sampling of the component follows it closely, and then the
-  /// component is scaled down to meters.
-  static PathComponent contourComponent(
-    Path path,
-    Vector2 size,
-    double pixels,
-  ) {
-    final metric = path.computeMetrics().first;
-    final contour = metric.extractPath(0, metric.length)..close();
-    return PathComponent(
-      path: contour.resizeTo((size * pixels).toSize(), keepRatio: true),
-      anchor: Anchor.center,
-      scale: Vector2.all(1 / pixels),
-    );
-  }
-
-  /// The convex pieces of the polygons of the [component], in the coordinates
-  /// of its parent, which Box2D accepts as polygons.
-  static List<List<Vector2>> piecesOf(PathComponent component) {
-    return [
-      for (final polygon in component.polygons)
-        ...convexPieces(
-          [for (final vertex in polygon) component.positionOf(vertex)],
-          maxVertices: Polygon.maxVertices,
-          minDistance: 4 * linearSlop,
-          minWidth: 2 * linearSlop,
-        ),
-    ];
-  }
-
-  @override
-  Future<void> onLoad() async {
-    final pixels = gameRef.metersToPixels;
-    final color = paint.color;
-    final component = contourComponent(path, size, pixels)
-      ..paintLayers = [
-        Paint()..color = color.withValues(alpha: 0.28),
-        Paint()
-          ..color = color.withValues(alpha: 0.95)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = outlineWidth * pixels,
-      ];
-    // The body is created from the pieces by super.onLoad, and again whenever
-    // it is mounted after being removed, so they are worked out only once.
-    _pieces = piecesOf(component);
-    await super.onLoad();
-    add(component);
-  }
-
-  @override
-  Body createBody() {
-    final shapeDef = ShapeDef(
-      userData: this, // To be able to determine object in collision
-      material: SurfaceMaterial(restitution: 0.4, friction: 0.5),
-    );
-
-    final bodyDef = BodyDef(
-      position: initialPosition,
-      rotation: Rot.fromAngle((initialPosition.x + initialPosition.y) / 2 * pi),
-      type: BodyType.dynamic,
-    );
-    final body = world.createBody(bodyDef);
-    for (final piece in _pieces) {
-      body.createShape(Polygon(piece), shapeDef);
-    }
-    return body;
   }
 }
 

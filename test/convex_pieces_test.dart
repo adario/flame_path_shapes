@@ -88,8 +88,10 @@ void main() {
         Vector2(2, 3),
         Vector2(3, 4.5),
         Vector2(4, 6),
-        // The size of the shapes in the contact callbacks example.
+        // The size of the shapes in the contact and tap callbacks examples.
         Vector2.all(4),
+        // The size of the shapes in the drag callbacks example.
+        Vector2.all(10),
       ]) {
         for (var i = 0; i < TestPaths.count; i++) {
           final name = TestPaths.names[i];

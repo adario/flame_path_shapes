@@ -170,3 +170,6 @@ mixin ShowPieces on Forge2DWorld {
     }
   }
 }
+
+/// A world with [ShowPieces] and nothing else.
+class ShowPiecesWorld() extends Forge2DWorld with ShowPieces;

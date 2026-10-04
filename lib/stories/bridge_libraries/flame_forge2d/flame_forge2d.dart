@@ -1,11 +1,12 @@
 import 'package:flame_path_shapes/commons/commons.dart';
 import 'package:flame_path_shapes/commons/example_use_case.dart';
+import 'package:flame_path_shapes/commons/test_path_knob.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/animated_body_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/camera_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/composition_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/contact_callbacks_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/domino_example.dart';
-// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/drag_callbacks_example.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/drag_callbacks_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/distance_joint.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/filter_joint.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/motor_joint.dart';
@@ -17,7 +18,7 @@ import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/raycast_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/revolute_joint_with_motor_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/sprite_body_example.dart';
-// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/tap_callbacks_example.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/tap_callbacks_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/widget_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/path_shape.dart';
 import 'package:flame/game.dart';
@@ -75,18 +76,26 @@ WidgetbookComponent forge2DStories() {
       //   codeLink: link('animated_body_example.dart'),
       //   info: AnimatedBodyExample.description,
       // ),
-      // ExampleUseCase(
-      //   name: 'Tappable Body',
-      //   builder: (_) => GameWidget(game: TapCallbacksExample()),
-      //   codeLink: link('tap_callbacks_example.dart'),
-      //   info: TapCallbacksExample.description,
-      // ),
-      // ExampleUseCase(
-      //   name: 'Draggable Body',
-      //   builder: (_) => GameWidget(game: DragCallbacksExample()),
-      //   codeLink: link('drag_callbacks_example.dart'),
-      //   info: DragCallbacksExample.description,
-      // ),
+      ExampleUseCase(
+        name: 'Tappable Body',
+        builder: (context) => TestPathStory(
+          shape: testPathKnob(context, ball: true),
+          showPieces: showPiecesKnob(context),
+          create: (shape) => TapCallbacksExample(shape: shape),
+        ),
+        codeLink: link('tap_callbacks_example.dart'),
+        info: TapCallbacksExample.description,
+      ),
+      ExampleUseCase(
+        name: 'Draggable Body',
+        builder: (context) => TestPathStory(
+          shape: testPathKnob(context, ball: true),
+          showPieces: showPiecesKnob(context),
+          create: (shape) => DragCallbacksExample(shape: shape),
+        ),
+        codeLink: link('drag_callbacks_example.dart'),
+        info: DragCallbacksExample.description,
+      ),
       // ExampleUseCase(
       //   name: 'Camera',
       //   builder: (_) => GameWidget(game: CameraExample()),

@@ -5,14 +5,27 @@ import 'package:widgetbook/widgetbook.dart';
 
 const _testPathKnob = 'Shape';
 
+/// The value of the [testPathKnob] for a ball instead of a test path.
+const ballShape = -1;
+
 /// A knob to pick one of the [TestPaths], which returns its index.
-int testPathKnob(BuildContext context) {
+///
+/// With [ball], the knob starts with a ball, whose value is [ballShape].
+int testPathKnob(BuildContext context, {bool ball = false}) {
   return context.knobs.object.dropdown(
     label: _testPathKnob,
-    initialOption: 0,
-    options: List.generate(TestPaths.count, (index) => index),
-    labelBuilder: (index) => TestPaths.names[index],
+    initialOption: ball ? ballShape : 0,
+    options: [
+      if (ball) ballShape,
+      ...List.generate(TestPaths.count, (index) => index),
+    ],
+    labelBuilder: testPathLabel,
   );
+}
+
+/// The label of the value [shape] of the [testPathKnob].
+String testPathLabel(int shape) {
+  return shape == ballShape ? 'ball' : TestPaths.names[shape];
 }
 
 /// A knob to rotate the shape, which is off by default.
@@ -21,13 +34,19 @@ bool rotateKnob(BuildContext context) {
 }
 
 /// A game that shows one of the [TestPaths], which can be changed later.
-mixin TestPathSelectable on FlameGame {
+/// It applies to any [Game], so that games with a specific world, like the
+/// Forge2D ones, can use it too.
+mixin TestPathSelectable on Game {
   /// Shows the shape with the given index in [TestPaths.names].
   void setShape(int shape);
 
   /// Rotates the shape or stops it, for the games that support the
   /// [rotateKnob]; the others ignore it.
   void setRotate(bool rotate) {}
+
+  /// Draws the convex pieces of the physics shapes or stops drawing them, for
+  /// the games that support a Show pieces knob; the others ignore it.
+  void setShowPieces(bool showPieces) {}
 
   /// Called with the index of the shape once the game has loaded, as it can
   /// be chosen by the game itself.
@@ -45,6 +64,7 @@ class TestPathStory extends StatefulWidget {
     required this.shape,
     required this.create,
     this.rotate = false,
+    this.showPieces = false,
     super.key,
   });
 
@@ -53,6 +73,9 @@ class TestPathStory extends StatefulWidget {
 
   /// The value of the [rotateKnob], if the game supports it.
   final bool rotate;
+
+  /// The value of the Show pieces knob, if the game supports it.
+  final bool showPieces;
 
   /// Creates the game with the given shape, or one of its own choice.
   final TestPathSelectable Function(int? shape) create;
@@ -64,7 +87,8 @@ class TestPathStory extends StatefulWidget {
 class _TestPathStoryState extends State<TestPathStory> {
   late final _game = widget.create(_hasKnobValue ? widget.shape : null)
     ..onShapeLoaded = _updateKnob
-    ..setRotate(widget.rotate);
+    ..setRotate(widget.rotate)
+    ..setShowPieces(widget.showPieces);
 
   bool get _hasKnobValue {
     final state = WidgetbookState.of(context);
@@ -81,6 +105,9 @@ class _TestPathStoryState extends State<TestPathStory> {
     if (widget.rotate != oldWidget.rotate) {
       _game.setRotate(widget.rotate);
     }
+    if (widget.showPieces != oldWidget.showPieces) {
+      _game.setShowPieces(widget.showPieces);
+    }
   }
 
   void _updateKnob(int shape) {
@@ -90,7 +117,7 @@ class _TestPathStoryState extends State<TestPathStory> {
     WidgetbookState.of(context).updateQueryField(
       group: 'knobs',
       field: _testPathKnob,
-      value: TestPaths.names[shape],
+      value: testPathLabel(shape),
     );
   }
 

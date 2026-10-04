@@ -54,7 +54,7 @@ class ContactCallbackWorld({bool showPieces = false})
   void onTapDown(TapDownEvent info) {
     super.onTapDown(info);
     final position = info.localPosition;
-    // White balls 20% of the times, balls and shapes 40% each.
+    // White balls 20% of the times, balls 30% and shapes 50%.
     final choice = _random.nextInt(10);
     if (choice < 2) {
       add(WhiteBall(position));

@@ -146,7 +146,11 @@ class DominoExampleWorld({bool showPieces = false})
   void onTapDown(TapDownEvent event) {
     final position = event.localPosition;
     add(
-      PathShape(position, TestPaths.byIndex(_shapes.next(), shapeSize.toSize()))
+      PathShape(
+          position,
+          TestPaths.byIndex(_shapes.next(), shapeSize.toSize()),
+          contour: null,
+        )
         ..paint = (Paint()..color = ExampleColors.dynamicColor(_tint++))
         ..renderBody = showPieces,
     );

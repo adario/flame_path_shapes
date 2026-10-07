@@ -66,6 +66,7 @@ class ContactCallbackWorld({bool showPieces = false})
           position,
           TestPaths.byIndex(_shapes.next(), shapeSize.toSize()),
           size: shapeSize,
+          contour: null,
           color: ExampleColors.dynamicColor(_tint++),
         )..renderBody = showPieces,
       );
@@ -78,6 +79,7 @@ class ContactPathShape(
   super.initialPosition,
   super.path, {
   super.size,
+  super.contour,
   required Color color,
 }) extends PathShape with ContactCallbacks, ContactPlayer {
   this {

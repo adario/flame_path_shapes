@@ -229,7 +229,18 @@ class PathShape(
 /// of them on each tap.
 class BallOrTestPath() {
   /// The names in [TestPaths.names] of the test paths that follow the ball.
-  static const names = ['flame', 'alien1', 'clover', 'abstract', 'invader3'];
+  static const names = [
+    'flame',
+    'alien1',
+    'clover',
+    'abstract',
+    'invader3',
+    'invader1',
+    'invader2',
+    'alien2',
+    'recycle',
+    'setup',
+  ];
 
   /// The number of choices so far.
   var _count = 0;

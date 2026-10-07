@@ -124,6 +124,7 @@ class WeldJointWorld()
             : PathShape(
                 info.localPosition,
                 path,
+                contour: null,
                 size: size,
                 initialAngle: 0,
                 material: SurfaceMaterial(restitution: 0.7),

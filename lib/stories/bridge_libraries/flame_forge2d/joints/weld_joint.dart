@@ -1,6 +1,7 @@
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/balls.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/boxes.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/joint_renderer.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/path_shape.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/style.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
@@ -104,10 +105,31 @@ class WeldJointWorld()
     add(JointRenderer(joint: joint));
   }
 
+  /// The bodies that the taps add, which cycle on each tap.
+  final _shapes = BallOrTestPath();
+
+  /// The index of the color of the next test path.
+  var _tint = 0;
+
   @override
   Future<void> onTapDown(TapDownEvent info) async {
     super.onTapDown(info);
-    final ball = Ball(info.localPosition, radius: 5);
-    add(ball);
+    const radius = 5.0;
+    // A test path is slightly larger than the ball, and moves like it.
+    final size = Vector2.all(radius * 2 + 1);
+    final path = _shapes.next(size.toSize());
+    add(
+      path == null
+            ? Ball(info.localPosition, radius: radius)
+            : PathShape(
+                info.localPosition,
+                path,
+                size: size,
+                initialAngle: 0,
+                material: SurfaceMaterial(restitution: 0.7),
+                angularDamping: 0.8,
+              )
+        ..paint = (Paint()..color = ExampleColors.dynamicColor(_tint++)),
+    );
   }
 }

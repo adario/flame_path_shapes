@@ -9,7 +9,6 @@ import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/s
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
-import 'package:flame_test/test_paths.dart';
 
 class RevoluteJointExample() extends Forge2DExampleGame {
   static const description = '''
@@ -31,18 +30,8 @@ class RevoluteJointWorld()
     addAll(createBoundaries(gameRef));
   }
 
-  /// The shapes that the taps cycle through, where null stands for circles.
-  static const _shapes = [
-    null,
-    'flame',
-    'alien1',
-    'clover',
-    'abstract',
-    'invader3',
-  ];
-
-  /// The number of taps so far.
-  var _taps = 0;
+  /// The shapes of the pieces, which cycle on each tap.
+  final _shapes = BallOrTestPath();
 
   @override
   void onTapDown(TapDownEvent event) {
@@ -50,23 +39,43 @@ class RevoluteJointWorld()
     final ball = Ball(event.localPosition);
     add(ball);
     const size = CircleShuffler.pathSize;
-    final name = _shapes[_taps++ % _shapes.length];
-    final path = name == null
-        ? null
-        : TestPaths.byName(name, const Size(size, size));
+    final path = _shapes.next(const Size(size, size));
     add(CircleShuffler(ball, path: path));
   }
 }
 
-/// A ring of pieces around the [ball], which are circles, or the convex pieces
-/// of the first contour of the [path] fitted within [pathSize], if any.
+/// A ring of pieces around the [ball], which are circles, or the first contour
+/// of the [path] fitted within [pathSize], if any, as [PathShapes].
 class CircleShuffler(final Ball ball, {final Path? path})
-    extends BodyComponent {
+    extends BodyComponent
+    with PathShapes {
+  // The convex pieces of a path are not drawn, only the path.
+  this : super(renderBody: path == null);
+
   static const pieceRadius = 1.2;
 
   /// The size of the square that the [path] is fitted within, in meters,
   /// slightly larger than the circles.
   static const pathSize = pieceRadius * 2 + 1;
+
+  static const _numPieces = 5;
+  static const _radius = 6.0;
+
+  /// The centers of the pieces, in the coordinates of the body.
+  static final _centers = [
+    for (var i = 0; i < _numPieces; i++)
+      Vector2(
+        _radius * cos(2 * pi * (i / _numPieces)),
+        _radius * sin(2 * pi * (i / _numPieces)),
+      ),
+  ];
+
+  @override
+  late final List<PathPlacement> pathPlacements = [
+    if (path != null)
+      for (final center in _centers)
+        (path: path!, size: Vector2.all(pathSize), offset: center),
+  ];
 
   @override
   Body createBody() {
@@ -74,39 +83,18 @@ class CircleShuffler(final Ball ball, {final Path? path})
       type: BodyType.dynamic,
       position: ball.body.position.clone(),
     );
-    const numPieces = 5;
-    const radius = 6.0;
     final body = world.createBody(bodyDef);
     final shapeDef = ShapeDef(
       density: 50.0,
       material: SurfaceMaterial(friction: 0.5, restitution: 0.4),
     );
-    // Centered on the origin, and shifted to each piece.
-    final pathPieces = path == null
-        ? null
-        : PathShape.piecesOf(
-            PathShape.contourComponent(
-              path!,
-              Vector2.all(pathSize),
-              gameRef.metersToPixels,
-            ),
-          );
 
-    for (var i = 0; i < numPieces; i++) {
-      final xPos = radius * cos(2 * pi * (i / numPieces));
-      final yPos = radius * sin(2 * pi * (i / numPieces));
-      final center = Vector2(xPos, yPos);
-
-      if (pathPieces == null) {
+    if (path == null) {
+      for (final center in _centers) {
         body.createShape(Circle(radius: pieceRadius, center: center), shapeDef);
-      } else {
-        for (final piece in pathPieces) {
-          body.createShape(
-            Polygon([for (final vertex in piece) vertex + center]),
-            shapeDef,
-          );
-        }
       }
+    } else {
+      createPathShapes(body, shapeDef);
     }
 
     final joint = world.physicsWorld.createRevoluteJoint(

@@ -43,11 +43,21 @@ lib/
     test_path_knob.dart     testPathKnob/rotateKnob, TestPathSelectable, TestPathStory
   platform/                 page_provider / stub_provider / web_provider (conditional web link opening)
   stories/
-    bridge_libraries/flame_forge2d/  forge2d examples + joints; utils/path_shape.dart
-                            (PathShape body from convex pieces, uses Flame's
-                            convexPieces from package:flame/geometry.dart),
+    bridge_libraries/flame_forge2d/  forge2d examples + joints; utils/path_shape.dart:
+                            PathShapes mixin (BodyComponent made of PathPlacements:
+                            each path's first contour drawn by a PathComponent with
+                            glowing look, colliding as convex pieces via Flame's
+                            convexPieces; createPathShapes adds them), PathShape
+                            (one placement; optional initialAngle/material/
+                            angularDamping), BallOrTestPath (shared tap cycle: ball
+                            then a fixed list of test paths, see the code),
+                            ShuffledTestPaths, ShowPieces;
                             hud, spawn_layout, swappable_body;
-                            sprite_body_example.dart from the fork (Sprite.contour)
+                            sprite_body_example.dart from the fork (Sprite.contour);
+                            joints/revolute_joint.dart: CircleShuffler with PathShapes
+                            (5 circles, or 5 placements of a path), joints/weld_joint.dart:
+                            Ball or PathShape with Ball's physics; both use
+                            BallOrTestPath and draw paths only (renderBody false)
     collision_detection/    13 examples (raycast*, rays_in_shape, multiple_shapes,
                             collidable_sprites (fork, Sprite.contour), circles, ...)
     experimental/           shapes.dart (Polygon.fromPath), layout_component_* examples

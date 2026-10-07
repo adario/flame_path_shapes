@@ -13,7 +13,7 @@ import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/drag_ca
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/mouse_joint.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/prismatic_joint.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/revolute_joint.dart';
-// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/weld_joint.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/weld_joint.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/wheel_joint.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/raycast_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/revolute_joint_with_motor_example.dart';
@@ -159,12 +159,12 @@ WidgetbookComponent jointsStories() {
         codeLink: link('joints/revolute_joint.dart'),
         info: RevoluteJointExample.description,
       ),
-      // ExampleUseCase(
-      //   name: 'WeldJoint',
-      //   builder: (_) => GameWidget(game: WeldJointExample()),
-      //   codeLink: link('joints/weld_joint.dart'),
-      //   info: WeldJointExample.description,
-      // ),
+      ExampleUseCase(
+        name: 'WeldJoint',
+        builder: (_) => GameWidget(game: WeldJointExample()),
+        codeLink: link('joints/weld_joint.dart'),
+        info: WeldJointExample.description,
+      ),
       // ExampleUseCase(
       //   name: 'WheelJoint',
       //   builder: (_) => GameWidget(game: WheelJointExample()),

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flame/components.dart';
-import 'package:flame_path_shapes/commons/convex_pieces.dart';
+import 'package:flame/geometry.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/path_shape.dart';
 import 'package:flame_test/test_paths.dart';
 import 'package:flutter_test/flutter_test.dart';

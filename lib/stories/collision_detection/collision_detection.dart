@@ -5,6 +5,7 @@ import 'package:flame_path_shapes/commons/test_path_knob.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/bouncing_ball_example.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/circles_example.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/collidable_animation_example.dart';
+import 'package:flame_path_shapes/stories/collision_detection/collidable_sprites_example.dart';
 import 'package:flame_path_shapes/stories/collision_detection/multiple_shapes_example.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/multiple_worlds_example.dart';
 // import 'package:flame_path_shapes/stories/collision_detection/quadtree_example.dart';
@@ -29,6 +30,14 @@ WidgetbookComponent collisionDetectionStories() {
       //   ),
       //   info: CollidableAnimationExample.description,
       // ),
+      ExampleUseCase(
+        name: 'Collidable SpriteComponent',
+        builder: (_) => GameWidget(game: CollidableSpritesExample()),
+        codeLink: baseLink(
+          'collision_detection/collidable_sprites_example.dart',
+        ),
+        info: CollidableSpritesExample.description,
+      ),
       // ExampleUseCase(
       //   name: 'Circles',
       //   builder: (_) => GameWidget(game: CirclesExample()),
@@ -113,7 +122,7 @@ WidgetbookComponent collisionDetectionStories() {
                   (RaysInShapeWorld.maxRays - RaysInShapeWorld.minRays) ~/
                   RaysInShapeWorld.raysStep,
             ),
-            changes: context.knobs.button(label: 'Rays', text: 'Change'),
+            changes: context.knobs.button(label: 'Change rays'),
           );
         },
         codeLink: baseLink('collision_detection/rays_in_shape_example.dart'),

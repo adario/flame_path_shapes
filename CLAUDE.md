@@ -9,10 +9,10 @@ It is a trimmed copy of the Flame `examples` app (Widgetbook-based, migrated fro
 ## Environment / tooling
 
 - Dart SDK `^3.13.2` (uses dot-shorthand syntax like `.round`, `.bevel`), Flutter.
-- `pubspec.yaml` uses `dependency_overrides` pointing to the **git** fork (`github.com/adario/flame`, ref `feat/path-svgs`, `packages/{flame,flame_forge2d,flame_test,flame_svg}`); switch to local paths (`../flame/packages/...`) to test unpushed fork changes. Flame source: `../flame` (currently on branch `feat/path-svgs`, merged with upstream `main`). Fixing a bug may mean editing `../flame`, not just this repo.
+- `pubspec.yaml` uses `dependency_overrides` pointing to the **git** fork (`github.com/adario/flame`, ref `testbed`, `packages/{flame,flame_forge2d,flame_test,flame_svg}`); switch to local paths (`../flame/packages/...`) to test unpushed fork changes. Flame source: `../flame` (branch `testbed` = `main` + `feat/path-svgs` + `feat/sprite-warp-grid` + `feat/image-contours`). Fixing a bug may mean editing `../flame`, not just this repo. Examples shared with `../flame/examples` follow upstream syntax (primary constructors, `package:material_ui/material_ui.dart`).
 - Other sibling dirs in `../`: `flame_extended_svg`, `flutter_games_compilation`, `repaint`, `instructions.txt` (original task prompt).
 - Lints: `flutter_lints` via `analysis_options.yaml` (android/ios/web/macos excluded); `flame_lint` is a dev dependency but not included. `flutter analyze`: 5 pre-existing `info` lints, no errors/warnings (copied example code).
-- Tests: only `test/widget_test.dart`. CI: `.github/workflows/main.yml`.
+- Tests: `test/convex_pieces_test.dart` (Flame's `convexPieces` on the app's test paths, Box2D limits), `test/spawn_layout_test.dart`, and `test/widget_test.dart` (Flutter template counter test, always fails). CI: `.github/workflows/main.yml`.
 - Shell note: `lean-ctx` hooks are active; if file/shell access fails, the `_lc` shell function is likely missing (defined in `../instructions.txt`).
 
 ## Layout
@@ -21,8 +21,10 @@ It is a trimmed copy of the Flame `examples` app (Widgetbook-based, migrated fro
 lib/
   main.dart                 Widgetbook entry (runAsWidgetbook); only
                             collisionDetectionStories, experimentalStories,
-                            inputStories enabled (rest commented out — those
-                            example dirs were not copied)
+                            inputStories, spritesStories, forge2DStories
+                            enabled (rest commented out — those example dirs
+                            were not copied); disabled use cases are kept
+                            commented out in each index file
   commons/
     commons.dart            baseLink() -> upstream examples URL
     example_app.dart        ExampleApp (Widgetbook appBuilder: title bar, info
@@ -36,11 +38,22 @@ lib/
                             randomPosition, addFixedPaths, addTestPaths
     position_paint_component.dart  PositionComponent + HasPaint
     rounded_rect_component.dart, slider_button_component.dart, ember.dart  (from Flame examples)
+    button_knob.dart        Widgetbook button knob, copied verbatim from the fork's
+                            examples: knobs.button(label:, enabled:)
+    test_path_knob.dart     testPathKnob/rotateKnob, TestPathSelectable, TestPathStory
   platform/                 page_provider / stub_provider / web_provider (conditional web link opening)
   stories/
-    collision_detection/    12 examples (raycast*, rays_in_shape, multiple_shapes, circles, quadtree, ...)
+    bridge_libraries/flame_forge2d/  forge2d examples + joints; utils/path_shape.dart
+                            (PathShape body from convex pieces, uses Flame's
+                            convexPieces from package:flame/geometry.dart),
+                            hud, spawn_layout, swappable_body;
+                            sprite_body_example.dart from the fork (Sprite.contour)
+    collision_detection/    13 examples (raycast*, rays_in_shape, multiple_shapes,
+                            collidable_sprites (fork, Sprite.contour), circles, ...)
     experimental/           shapes.dart (Polygon.fromPath), layout_component_* examples
     input/                  23 input examples incl. gesture_hitboxes_example.dart
+    sprites/                from the fork; only sprite_warp_example.dart (WarpEffect)
+                            copied and enabled
 assets/                     images/audio/svgs/tiles/yarn from Flame examples; assets/svgs/*.svg are used by SvgPaths
 ```
 

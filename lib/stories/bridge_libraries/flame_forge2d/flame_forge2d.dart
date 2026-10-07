@@ -17,7 +17,7 @@ import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/wheel_joint.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/raycast_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/revolute_joint_with_motor_example.dart';
-// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/sprite_body_example.dart';
+import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/sprite_body_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/tap_callbacks_example.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/widget_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/path_shape.dart';
@@ -64,12 +64,14 @@ WidgetbookComponent forge2DStories() {
         codeLink: link('revolute_joint_with_motor_example.dart'),
         info: RevoluteJointWithMotorExample.description,
       ),
-      // ExampleUseCase(
-      //   name: 'Sprite Bodies',
-      //   builder: (_) => GameWidget(game: SpriteBodyExample()),
-      //   codeLink: link('sprite_body_example.dart'),
-      //   info: SpriteBodyExample.description,
-      // ),
+      ExampleUseCase(
+        name: 'Sprite Bodies',
+        builder: (context) => _SpriteBodyStory(
+          showPieces: showPiecesKnob(context),
+        ),
+        codeLink: link('sprite_body_example.dart'),
+        info: SpriteBodyExample.description,
+      ),
       // ExampleUseCase(
       //   name: 'Animated Bodies',
       //   builder: (_) => GameWidget(game: AnimatedBodyExample()),
@@ -198,6 +200,29 @@ class _ShowPiecesStoryState() extends State<_ShowPiecesStory> {
     super.didUpdateWidget(oldWidget);
     if (widget.showPieces != oldWidget.showPieces) {
       (_game.world as ShowPieces).showPieces = widget.showPieces;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => GameWidget(game: _game);
+}
+
+/// Hosts a single [SpriteBodyExample] and applies the [showPieces] knob to it,
+/// so that changing the knob doesn't restart the game.
+class const _SpriteBodyStory({required final bool showPieces})
+    extends StatefulWidget {
+  @override
+  State<_SpriteBodyStory> createState() => _SpriteBodyStoryState();
+}
+
+class _SpriteBodyStoryState() extends State<_SpriteBodyStory> {
+  late final _game = SpriteBodyExample(showPieces: widget.showPieces);
+
+  @override
+  void didUpdateWidget(_SpriteBodyStory oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showPieces != oldWidget.showPieces) {
+      (_game.world as SpriteBodyWorld).showPieces = widget.showPieces;
     }
   }
 

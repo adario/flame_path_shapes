@@ -67,7 +67,7 @@ void runAsWidgetbook() {
 
         // Bridge package examples
         forge2DStories(),
-        // jointsStories(),
+        jointsStories(),
         // flameIsolateStories(),
         // flameJennyStories(),
         // flameLottieStories(),

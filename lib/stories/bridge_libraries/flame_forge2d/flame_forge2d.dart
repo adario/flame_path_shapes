@@ -7,14 +7,14 @@ import 'package:flame_path_shapes/commons/test_path_knob.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/contact_callbacks_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/domino_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/drag_callbacks_example.dart';
-import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/distance_joint.dart';
-import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/filter_joint.dart';
-import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/motor_joint.dart';
-import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/mouse_joint.dart';
-import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/prismatic_joint.dart';
+// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/distance_joint.dart';
+// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/filter_joint.dart';
+// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/motor_joint.dart';
+// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/mouse_joint.dart';
+// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/prismatic_joint.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/revolute_joint.dart';
-import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/weld_joint.dart';
-import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/wheel_joint.dart';
+// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/weld_joint.dart';
+// import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/joints/wheel_joint.dart';
 // import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/raycast_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/revolute_joint_with_motor_example.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/sprite_body_example.dart';
@@ -66,9 +66,8 @@ WidgetbookComponent forge2DStories() {
       ),
       ExampleUseCase(
         name: 'Sprite Bodies',
-        builder: (context) => _SpriteBodyStory(
-          showPieces: showPiecesKnob(context),
-        ),
+        builder: (context) =>
+            _SpriteBodyStory(showPieces: showPiecesKnob(context)),
         codeLink: link('sprite_body_example.dart'),
         info: SpriteBodyExample.description,
       ),
@@ -124,54 +123,54 @@ WidgetbookComponent jointsStories() {
   return WidgetbookComponent(
     name: 'flame_forge2d/joints',
     useCases: [
-      ExampleUseCase(
-        name: 'FilterJoint',
-        builder: (_) => GameWidget(game: FilterJointExample()),
-        codeLink: link('joints/filter_joint.dart'),
-        info: FilterJointExample.description,
-      ),
-      ExampleUseCase(
-        name: 'DistanceJoint',
-        builder: (_) => GameWidget(game: DistanceJointExample()),
-        codeLink: link('joints/distance_joint.dart'),
-        info: DistanceJointExample.description,
-      ),
-      ExampleUseCase(
-        name: 'MotorJoint',
-        builder: (_) => GameWidget(game: MotorJointExample()),
-        codeLink: link('joints/motor_joint.dart'),
-        info: MotorJointExample.description,
-      ),
-      ExampleUseCase(
-        name: 'MouseJoint',
-        builder: (_) => GameWidget(game: MouseJointExample()),
-        codeLink: link('joints/mouse_joint.dart'),
-        info: MouseJointExample.description,
-      ),
-      ExampleUseCase(
-        name: 'PrismaticJoint',
-        builder: (_) => GameWidget(game: PrismaticJointExample()),
-        codeLink: link('joints/prismatic_joint.dart'),
-        info: PrismaticJointExample.description,
-      ),
+      // ExampleUseCase(
+      //   name: 'FilterJoint',
+      //   builder: (_) => GameWidget(game: FilterJointExample()),
+      //   codeLink: link('joints/filter_joint.dart'),
+      //   info: FilterJointExample.description,
+      // ),
+      // ExampleUseCase(
+      //   name: 'DistanceJoint',
+      //   builder: (_) => GameWidget(game: DistanceJointExample()),
+      //   codeLink: link('joints/distance_joint.dart'),
+      //   info: DistanceJointExample.description,
+      // ),
+      // ExampleUseCase(
+      //   name: 'MotorJoint',
+      //   builder: (_) => GameWidget(game: MotorJointExample()),
+      //   codeLink: link('joints/motor_joint.dart'),
+      //   info: MotorJointExample.description,
+      // ),
+      // ExampleUseCase(
+      //   name: 'MouseJoint',
+      //   builder: (_) => GameWidget(game: MouseJointExample()),
+      //   codeLink: link('joints/mouse_joint.dart'),
+      //   info: MouseJointExample.description,
+      // ),
+      // ExampleUseCase(
+      //   name: 'PrismaticJoint',
+      //   builder: (_) => GameWidget(game: PrismaticJointExample()),
+      //   codeLink: link('joints/prismatic_joint.dart'),
+      //   info: PrismaticJointExample.description,
+      // ),
       ExampleUseCase(
         name: 'RevoluteJoint',
         builder: (_) => GameWidget(game: RevoluteJointExample()),
         codeLink: link('joints/revolute_joint.dart'),
         info: RevoluteJointExample.description,
       ),
-      ExampleUseCase(
-        name: 'WeldJoint',
-        builder: (_) => GameWidget(game: WeldJointExample()),
-        codeLink: link('joints/weld_joint.dart'),
-        info: WeldJointExample.description,
-      ),
-      ExampleUseCase(
-        name: 'WheelJoint',
-        builder: (_) => GameWidget(game: WheelJointExample()),
-        codeLink: link('joints/wheel_joint.dart'),
-        info: WheelJointExample.description,
-      ),
+      // ExampleUseCase(
+      //   name: 'WeldJoint',
+      //   builder: (_) => GameWidget(game: WeldJointExample()),
+      //   codeLink: link('joints/weld_joint.dart'),
+      //   info: WeldJointExample.description,
+      // ),
+      // ExampleUseCase(
+      //   name: 'WheelJoint',
+      //   builder: (_) => GameWidget(game: WheelJointExample()),
+      //   codeLink: link('joints/wheel_joint.dart'),
+      //   info: WheelJointExample.description,
+      // ),
     ],
   );
 }

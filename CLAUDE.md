@@ -45,11 +45,14 @@ lib/
   stories/
     bridge_libraries/flame_forge2d/  forge2d examples + joints; utils/path_shape.dart:
                             PathShapes mixin (BodyComponent made of PathPlacements:
-                            each path's first contour drawn by a PathComponent with
+                            one contour of each path by index, or the whole path
+                            if contour is null, drawn by a PathComponent with
                             glowing look, colliding as convex pieces via Flame's
                             convexPieces; createPathShapes adds them), PathShape
-                            (one placement; optional initialAngle/material/
-                            angularDamping), BallOrTestPath (shared tap cycle: ball
+                            (one placement; contour defaults to 0, null = whole
+                            path; optional initialAngle/material/
+                            angularDamping; static placementComponent/piecesOf
+                            also used by tests), BallOrTestPath (shared tap cycle: ball
                             then a fixed list of test paths, see the code),
                             ShuffledTestPaths, ShowPieces;
                             hud, spawn_layout, swappable_body;

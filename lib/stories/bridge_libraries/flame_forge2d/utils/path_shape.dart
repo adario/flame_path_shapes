@@ -8,13 +8,19 @@ import 'package:flame/geometry.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
 import 'package:flame_test/test_paths.dart';
 
-/// The first contour of a [path], fitted within [size] meters and centered on
-/// [offset], in the coordinates of a body.
-typedef PathPlacement = ({Path path, Vector2 size, Vector2 offset});
+/// The [contour] of a [path] with that index, or the whole [path] if it is
+/// null, fitted within [size] meters and centered on [offset], in the
+/// coordinates of a body.
+typedef PathPlacement = ({
+  Path path,
+  int? contour,
+  Vector2 size,
+  Vector2 offset,
+});
 
-/// A body made of the first contours of some [Path]s, each one drawn by a
+/// A body made of some [Path]s, or of one contour of each, each one drawn by a
 /// [PathComponent] with the look of [GlowingBody] in the color of the [paint],
-/// and colliding as the convex pieces of the polygon of that component.
+/// and colliding as the convex pieces of the polygons of that component.
 ///
 /// The body has to add the pieces as its shapes with [createPathShapes]. They
 /// are drawn on top of the paths when [renderBody] is true, so it is usually
@@ -39,19 +45,21 @@ mixin PathShapes on BodyComponent {
   Future<void> onLoad() async {
     _pixels = gameRef.metersToPixels;
     // The pieces of a path are worked out once, even when it is placed more
-    // than once with the same size, and shifted to each placement.
+    // than once with the same contour and size, and shifted to each placement.
     final known = <(PathPlacement, List<List<Vector2>>)>[];
     final pieces = <List<Vector2>>[];
     for (final placement in pathPlacements) {
-      final component = PathShape.contourComponent(
+      final component = PathShape.placementComponent(
         placement.path,
         placement.size,
         _pixels,
+        contour: placement.contour,
       );
       var placementPieces = known
           .where(
             (entry) =>
                 identical(entry.$1.path, placement.path) &&
+                entry.$1.contour == placement.contour &&
                 entry.$1.size == placement.size,
           )
           .firstOrNull
@@ -110,9 +118,10 @@ mixin PathShapes on BodyComponent {
   }
 }
 
-/// A body with the shape of the first contour of a [Path], fitted within
+/// A body with the shape of the [contour] of a [Path] with that index, the
+/// first one by default, or of the whole [path] if it is null, fitted within
 /// [size] meters, which is drawn by a [PathComponent] and collides as the
-/// convex pieces of the polygon of that component.
+/// convex pieces of the polygons of that component.
 ///
 /// The body starts at the [initialAngle], or at one worked out from the
 /// [initialPosition] if there is none, and its shapes have the [material],
@@ -122,6 +131,7 @@ mixin PathShapes on BodyComponent {
 class PathShape(
   final Vector2 initialPosition,
   final Path path, {
+  final int? contour = 0,
   Vector2? size,
   final double? initialAngle,
   final SurfaceMaterial? material,
@@ -140,7 +150,7 @@ class PathShape(
 
   @override
   late final List<PathPlacement> pathPlacements = [
-    (path: path, size: size, offset: Vector2.zero()),
+    (path: path, contour: contour, size: size, offset: Vector2.zero()),
   ];
 
   @override
@@ -149,21 +159,29 @@ class PathShape(
   @override
   double get pathOutlineWidth => outlineWidth;
 
-  /// The component that draws the first contour of the [path], fitted within
-  /// [size] meters, with [pixels] per meter.
+  /// The component that draws the [contour] of the [path] with that index, or
+  /// the whole [path] if it is null, fitted within [size] meters, with
+  /// [pixels] per meter.
   ///
-  /// The contour is laid out in pixels rather than in meters, so that the
-  /// default sampling of the component follows it closely, and then the
-  /// component is scaled down to meters.
-  static PathComponent contourComponent(
+  /// A single contour is fitted on its own, and closed. The path is laid out
+  /// in pixels rather than in meters, so that the default sampling of the
+  /// component follows it closely, and then the component is scaled down to
+  /// meters.
+  static PathComponent placementComponent(
     Path path,
     Vector2 size,
-    double pixels,
-  ) {
-    final metric = path.computeMetrics().first;
-    final contour = metric.extractPath(0, metric.length)..close();
+    double pixels, {
+    int? contour = 0,
+  }) {
+    var shape = path;
+    if (contour != null) {
+      final metrics = path.computeMetrics().toList();
+      RangeError.checkValidIndex(contour, metrics, 'contour');
+      final metric = metrics[contour];
+      shape = metric.extractPath(0, metric.length)..close();
+    }
     return PathComponent(
-      path: contour.resizeTo((size * pixels).toSize(), keepRatio: true),
+      path: shape.resizeTo((size * pixels).toSize(), keepRatio: true),
       anchor: Anchor.center,
       scale: Vector2.all(1 / pixels),
     );

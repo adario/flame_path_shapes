@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame/geometry.dart';
@@ -96,7 +97,7 @@ void main() {
         for (var i = 0; i < TestPaths.count; i++) {
           final name = TestPaths.names[i];
           test('$name at ${size.x} x ${size.y} m, $pixels px/m', () {
-            final component = PathShape.contourComponent(
+            final component = PathShape.placementComponent(
               TestPaths.byIndex(i, size.toSize()),
               size,
               pixels,
@@ -129,6 +130,73 @@ void main() {
     }
   });
 
+  group('PathShape placements', () {
+    // Two disjoint squares, 1 x 1 and 2 x 2 pixels, 1 pixel apart.
+    final twoSquares = Path()
+      ..addRect(const Rect.fromLTWH(0, 0, 1, 1))
+      ..addRect(const Rect.fromLTWH(2, 0, 2, 2));
+
+    test('uses only the given contour, fitted on its own', () {
+      final component = PathShape.placementComponent(
+        twoSquares,
+        Vector2.all(2),
+        10,
+        contour: 1,
+      );
+      final pieces = PathShape.piecesOf(component);
+      expect(_totalArea(pieces), closeTo(4, 0.01));
+    });
+
+    test('uses all the contours of the whole path', () {
+      final component = PathShape.placementComponent(
+        twoSquares,
+        Vector2(4, 2),
+        10,
+        contour: null,
+      );
+      final pieces = PathShape.piecesOf(component);
+      expect(_totalArea(pieces), closeTo(1 + 4, 0.01));
+      // The pieces are spread over both squares, around the center.
+      final xs = [for (final piece in pieces) ...piece.map((v) => v.x)];
+      expect(xs.reduce(math.min), closeTo(-2, 0.01));
+      expect(xs.reduce(math.max), closeTo(2, 0.01));
+    });
+
+    test('rejects a contour that the path does not have', () {
+      expect(
+        () => PathShape.placementComponent(
+          twoSquares,
+          Vector2.all(2),
+          10,
+          contour: 2,
+        ),
+        throwsRangeError,
+      );
+    });
+
+    for (var i = 0; i < TestPaths.count; i++) {
+      final name = TestPaths.names[i];
+      test('$name as a whole path gives valid Box2D polygons', () {
+        final size = Vector2(2, 3);
+        final component = PathShape.placementComponent(
+          TestPaths.byIndex(i, size.toSize()),
+          size,
+          24,
+          contour: null,
+        );
+        final pieces = PathShape.piecesOf(component);
+        expect(pieces, isNotEmpty);
+        for (final (index, piece) in pieces.indexed) {
+          expect(
+            _box2dHull(piece, PathShape.linearSlop).length,
+            greaterThanOrEqualTo(3),
+            reason: 'piece $index: $piece',
+          );
+        }
+      });
+    }
+  });
+
   // flame_forge2d warns about the shapes of moving bodies that are less than
   // 0.1 meters across (5 speculative distances), and each piece is a shape.
   group('PathShape pieces of the examples are large enough for Forge2D', () {
@@ -157,7 +225,7 @@ void main() {
       for (final name in paths) {
         final i = TestPaths.names.indexOf(name);
         test('$name in the $example example, at ${size.x} m', () {
-          final component = PathShape.contourComponent(
+          final component = PathShape.placementComponent(
             TestPaths.byIndex(i, size.toSize()),
             size,
             pixels,

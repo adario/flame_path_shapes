@@ -74,7 +74,7 @@ class CircleShuffler(final Ball ball, {final Path? path})
   late final List<PathPlacement> pathPlacements = [
     if (path != null)
       for (final center in _centers)
-        (path: path!, size: Vector2.all(pathSize), offset: center),
+        (path: path!, contour: 0, size: Vector2.all(pathSize), offset: center),
   ];
 
   @override

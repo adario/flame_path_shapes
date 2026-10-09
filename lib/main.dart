@@ -4,6 +4,7 @@ import 'package:flame_path_shapes/stories/collision_detection/collision_detectio
 import 'package:flame_path_shapes/stories/experimental/experimental.dart';
 import 'package:flame_path_shapes/stories/input/input.dart';
 import 'package:flame_path_shapes/stories/sprites/sprites.dart';
+import 'package:flame_path_shapes/stories/svg/svg.dart';
 import 'package:flutter/widgets.dart';
 import 'package:widgetbook/widgetbook.dart';
 
@@ -59,7 +60,7 @@ void runAsWidgetbook() {
         // routerStories(),
         // tiledStories(),
         spritesStories(),
-        // svgStories(),
+        svgStories(),
         // systemStories(),
         // utilsStories(),
         // widgetsStories(),

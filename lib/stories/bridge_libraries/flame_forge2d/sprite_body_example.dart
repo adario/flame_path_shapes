@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flame/extensions.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/boundaries.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/style.dart';
 import 'package:flame/components.dart';
@@ -107,11 +108,7 @@ class ContourBody(
   required final List<List<Vector2>> pieces,
   required final Vector2 size,
 }) extends BodyComponent with GlowingBody {
-  this
-    : super(
-        paint: Paint()..color = ExampleColors.sky,
-        renderBody: false,
-      );
+  this : super(paint: Paint()..color = ExampleColors.sky, renderBody: false);
 
   /// The linear slop of Box2D in meters, as `Tolerances.linearSlop` with the
   /// default length units, which is not used here as it needs the native
@@ -138,7 +135,7 @@ class ContourBody(
     // pieces are relative to its center.
     final center = pixelSize / 2;
     return [
-      for (final polygon in PathComponent.polygonsOf(outline))
+      for (final polygon in outline.toPolygons())
         ...convexPieces(
           [for (final vertex in polygon) (vertex - center) / pixels],
           minDistance: 4 * linearSlop,
@@ -180,10 +177,8 @@ class ContourBody(
   }
 }
 
-class Pizza(
-  final Vector2 initialPosition, {
-  Vector2? size,
-}) extends BodyComponent {
+class Pizza(final Vector2 initialPosition, {Vector2? size})
+    extends BodyComponent {
   final Vector2 size = size ?? Vector2(2, 3);
 
   @override
@@ -191,13 +186,7 @@ class Pizza(
     await super.onLoad();
     final sprite = await gameRef.loadSprite('assets/images/pizza.png');
     renderBody = false;
-    add(
-      SpriteComponent(
-        sprite: sprite,
-        size: size,
-        anchor: Anchor.center,
-      ),
-    );
+    add(SpriteComponent(sprite: sprite, size: size, anchor: Anchor.center));
   }
 
   @override

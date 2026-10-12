@@ -1,5 +1,7 @@
+import 'package:flame/components.dart';
 import 'package:flame_path_shapes/commons/button_knob.dart';
 import 'package:flame_path_shapes/commons/commons.dart';
+import 'package:flame_path_shapes/commons/dropdown_knob.dart';
 import 'package:flame_path_shapes/commons/example_use_case.dart';
 // import 'package:flame_path_shapes/stories/sprites/base64_sprite_example.dart';
 // import 'package:flame_path_shapes/stories/sprites/basic_sprite_example.dart';
@@ -76,8 +78,27 @@ WidgetbookComponent spritesStories() {
               options: SpriteWarpImage.values,
               labelBuilder: (image) => image.name,
             ),
+            interpolation: context.knobs.object.dropdown(
+              label: 'Interpolation',
+              initialOption: WarpInterpolation.bilinear,
+              options: WarpInterpolation.values,
+              labelBuilder: (interpolation) => interpolation.name,
+            ),
+            defaultTarget: context.knobs.dropdown(
+              label: 'Default Target',
+              options: DefaultWarpTarget.values,
+              labelBuilder: (target) => target.label,
+              enabled: !animate,
+            ),
             animate: animate,
-            resets: context.knobs.button(label: 'Reset', enabled: !animate),
+            startResets: context.knobs.button(
+              label: 'Reset Start',
+              enabled: !animate,
+            ),
+            targetResets: context.knobs.button(
+              label: 'Reset Target',
+              enabled: !animate,
+            ),
           );
         },
         codeLink: baseLink('sprites/sprite_warp_example.dart'),

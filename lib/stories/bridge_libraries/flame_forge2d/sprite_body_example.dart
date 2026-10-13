@@ -1,11 +1,11 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:flame/extensions.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/boundaries.dart';
 import 'package:flame_path_shapes/stories/bridge_libraries/flame_forge2d/utils/style.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
+import 'package:flame/extensions.dart';
 import 'package:flame/geometry.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
 
@@ -13,15 +13,14 @@ class SpriteBodyExample({bool showPieces = false})
     extends Forge2DExampleGame
     with HasGameRef<Forge2DExampleGame> {
   static const String description = '''
-    In this example we show how to add a sprite on top of a `BodyComponent`
+    In this example we show how to add a sprite on top of a BodyComponent
     whose shape follows the outline of the sprite.
 
     The outline is traced from the pixels of the image that are not
-    transparent, with `Sprite.contour`, and the body collides as its convex
+    transparent with Sprite.contour, and the body collides as its convex
     pieces, which the Show pieces knob draws.
 
-    Tap the screen to add more bodies, which alternate between flames and
-    pizzas.
+    Tap the screen to add more bodies.
   ''';
 
   this
@@ -31,28 +30,20 @@ class SpriteBodyExample({bool showPieces = false})
       );
 }
 
-/// A sprite, with its size in meters, with the aspect ratio of the sprite,
-/// and the convex pieces of its outline, which all the bodies of that sprite
-/// share, since tracing it reads back the pixels of the image.
-typedef _Shape = ({Sprite sprite, Vector2 size, List<List<Vector2>> pieces});
-
 class SpriteBodyWorld({bool showPieces = false})
     extends Forge2DWorld
     with TapCallbacks, HasGameRef<Forge2DGame> {
-  /// The images of the bodies, which the taps go through in turn, with their
-  /// widths in meters.
+  /// The images added in turn by taps, with their widths in meters.
   static const images = {'flame.png': 8.0, 'pizza.png': 6.0, 'zap.png': 9.0};
 
-  /// The shape of each of the [images].
-  late final List<_Shape> _shapes;
-
-  /// The number of bodies added by tapping, which picks the next shape.
   int _taps = 0;
+
+  /// The pieces traced by the bodies, shared by those of the same image.
+  final _pieces = <Image, Future<List<List<Vector2>>>>{};
 
   bool _showPieces = showPieces;
 
-  /// Whether the convex pieces of the bodies are drawn, which applies to the
-  /// bodies already added too.
+  /// Whether the convex pieces of all the bodies are drawn.
   bool get showPieces => _showPieces;
   set showPieces(bool value) {
     _showPieces = value;
@@ -66,69 +57,69 @@ class SpriteBodyWorld({bool showPieces = false})
     await super.onLoad();
     gameRef.camera.viewport.add(FpsTextComponent(position: Vector2(8, 4)));
     addAll(createBoundaries(gameRef));
-    _shapes = [
-      for (final MapEntry(key: image, value: width) in images.entries)
-        await _loadShape(image, width),
-    ];
-  }
-
-  /// The shape of the [image], scaled to the [width] in meters.
-  Future<_Shape> _loadShape(String image, double width) async {
-    final sprite = await gameRef.loadSprite('assets/images/$image');
-    final size = sprite.srcSize..scale(width / sprite.srcSize.x);
-    final pieces = await ContourBody.piecesOf(
-      sprite,
-      size,
-      gameRef.metersToPixels,
-    );
-    return (sprite: sprite, size: size, pieces: pieces);
+    await gameRef.images.loadAll([
+      for (final image in images.keys) 'assets/images/$image',
+    ]);
   }
 
   @override
   void onTapDown(TapDownEvent info) {
     super.onTapDown(info);
-    final shape = _shapes[_taps++ % _shapes.length];
+    final MapEntry(key: image, value: width) = images.entries.elementAt(
+      _taps++ % images.length,
+    );
+    final sprite = Sprite(gameRef.images.fromCache('assets/images/$image'));
     add(
       ContourBody(
         info.localPosition,
-        sprite: shape.sprite,
-        pieces: shape.pieces,
-        size: shape.size,
+        sprite: sprite,
+        size: sprite.srcSize..scale(width / sprite.srcSize.x),
+        cache: _pieces,
       )..renderBody = showPieces,
     );
   }
 }
 
-/// A body that is drawn by a [sprite] of the given [size], in meters, and
-/// collides as the convex [pieces] of its outline, which are drawn on top of
-/// the [sprite] when [renderBody] is true.
+/// A body drawn by a [sprite] (when [renderBody] is `true`) of the given [size]
+/// in meters, colliding as the convex [pieces] of its outline.
+///
+/// The pieces are traced only once for each image by the bodies sharing the
+/// same [cache], which must all draw the full image whole at the same size.
 class ContourBody(
   final Vector2 initialPosition, {
   required final Sprite sprite,
-  required final List<List<Vector2>> pieces,
   required final Vector2 size,
+  final Map<Image, Future<List<List<Vector2>>>>? cache,
 }) extends BodyComponent with GlowingBody {
-  this : super(paint: Paint()..color = ExampleColors.sky, renderBody: false);
+  this
+    : super(
+        paint: Paint()..color = ExampleColors.sky,
+        renderBody: false,
+      );
 
-  /// The linear slop of Box2D in meters, as `Tolerances.linearSlop` with the
-  /// default length units, which is not used here as it needs the native
-  /// library: the points of a polygon closer than 4 times it are welded, and
-  /// the ones closer than twice it to an edge are dropped, see
-  /// `b2ComputeHull`.
+  /// Box2D's `linearSlop` in meters (the native `Tolerances` can't be used
+  /// here): `b2ComputeHull` welds points closer than 4 times it and drops
+  /// those closer than twice it to an edge.
   static const linearSlop = 0.005;
 
-  /// The convex pieces of the outline of the [sprite], drawn with the given
-  /// [size] in meters, relative to its center.
+  /// The convex pieces of the outline of the [sprite].
+  late final List<List<Vector2>> pieces;
+
+  @override
+  Future<void> onLoad() async {
+    pieces =
+        await (cache?.putIfAbsent(sprite.image, tracePieces) ?? tracePieces());
+    // Creates the body from the pieces.
+    await super.onLoad();
+  }
+
+  /// Traces the convex pieces of the outline of the [sprite], relative to its
+  /// center.
   ///
-  /// The outline is traced in pixels rather than in meters, with [pixels] per
-  /// meter, so that the default sampling of the polygons of a
-  /// [PathComponent] follows it closely. The parts of the sprite that are
-  /// apart give separate polygons, and so separate pieces.
-  static Future<List<List<Vector2>>> piecesOf(
-    Sprite sprite,
-    Vector2 size,
-    double pixels,
-  ) async {
+  /// The outline is traced in pixels, so that the polygons of the path follow
+  /// it closely.
+  Future<List<List<Vector2>>> tracePieces() async {
+    final pixels = gameRef.metersToPixels;
     final pixelSize = size * pixels;
     final outline = await sprite.contour(size: pixelSize);
     // The outline is relative to the top left corner of the sprite, while the
@@ -177,8 +168,10 @@ class ContourBody(
   }
 }
 
-class Pizza(final Vector2 initialPosition, {Vector2? size})
-    extends BodyComponent {
+class Pizza(
+  final Vector2 initialPosition, {
+  Vector2? size,
+}) extends BodyComponent {
   final Vector2 size = size ?? Vector2(2, 3);
 
   @override
@@ -186,7 +179,13 @@ class Pizza(final Vector2 initialPosition, {Vector2? size})
     await super.onLoad();
     final sprite = await gameRef.loadSprite('assets/images/pizza.png');
     renderBody = false;
-    add(SpriteComponent(sprite: sprite, size: size, anchor: Anchor.center));
+    add(
+      SpriteComponent(
+        sprite: sprite,
+        size: size,
+        anchor: Anchor.center,
+      ),
+    );
   }
 
   @override

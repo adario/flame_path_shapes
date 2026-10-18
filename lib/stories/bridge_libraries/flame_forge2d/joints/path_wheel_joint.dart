@@ -48,7 +48,7 @@ class PathWheelJointWorld()
     // Without merging, the wheels are paths of their own, even though they
     // have the same paint.
     final svg = await SvgPaths.fromFile('assets/svgs/car.svg', merge: false);
-    final paths = [for (var i = 0; i < 3; i++) svg.pathAt(i)!.path];
+    final paths = [for (var i = 0; i < 3; i++) svg.pathAt(i).path];
     final scale = 4.4 / paths[2].getBounds().width;
     final matrix = Matrix4.diagonal3Values(scale, scale, 1).storage;
     return [for (final path in paths) path.transform32(matrix)];
